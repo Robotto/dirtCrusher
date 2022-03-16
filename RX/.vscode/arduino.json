@@ -1,0 +1,6 @@
+{
+  "sketch": "dirtCrusherRX.ino",
+  "output": "/home/robotto/Hack/output",
+  "board": "arduino:avr:leonardo",
+  "port": "/dev/ttyACM1"
+}
