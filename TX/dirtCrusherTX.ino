@@ -13,7 +13,7 @@ const int steering_bPin = 16;
 const int fasterPaddlePin = 14;
 const int slowerPaddlePin = 15;
 
-uint8_t rx=255;
+uint8_t rx=255; //TODO: receive battery telemetry from dirtCrusher
 
 // stick states: 3 is center (neutral)
 // 0 1 2 3 4 5 6
@@ -53,20 +53,24 @@ void setup() {
   digitalWrite(yPin,LOW);
 }
 
-
+unsigned int TXPERIOD = 100; //10 transmits per second.. seems kinda low..
+unsigned long lastTXtime=0;
 void loop() {
+
   uint8_t throttleVal = 3 + readStick(xPin, yPin, throttle_aPin, throttle_bPin); //-3 to 3 -> 0 to 6
   uint8_t steeringVal = 3 + readStick(xPin, yPin, steering_aPin, steering_bPin);
 
   uint8_t payload = speed << 6 | steeringVal << 3 | throttleVal; ///JOIN THE VALUES into one byte
 
-  Serial1.write(payload); //SEND IT!
-
-  delay(40);
   if(Serial1.available()) rx = Serial1.read();
+
+  if(millis()-lastTXtime > TXPERIOD) {
+    Serial1.write(payload); //SEND IT!
+    lastTXtime=millis();
+  }
 }
 
-//WORST CASE RUNTIME: 40mS
+//WORST CASE RUNTIME: >20mS
 int checkPaddles()
 {
   static bool lastState_fasterPaddle = HIGH;
