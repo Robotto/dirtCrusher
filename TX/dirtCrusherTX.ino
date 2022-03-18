@@ -66,7 +66,7 @@ void loop() {
 
   if(millis()-lastTXtime > TXPERIOD) {
     Serial1.write(payload); //SEND IT!
-    lastTXtime=millis();
+    lastTXtime=millis();,
   }
 }
 
