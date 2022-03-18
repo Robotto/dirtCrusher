@@ -1,17 +1,17 @@
 
-const int HC12_SETpin = 3; //command pin
+const int HC12_SETpin = 8; //command pin
 bool HC12_commandMode = false;
 
-const int xPin = 4;
-const int yPin = 5;
-const int throttle_aPin = 6;
-const int throttle_bPin = 7;
+const int xPin = 14; //ORANGE
+const int yPin = 5; //GREEN
+const int throttle_aPin = A3; //yellow
+const int throttle_bPin = A2; //WHITE
 
-const int steering_aPin = 10;
-const int steering_bPin = 16;
+const int steering_aPin = 7; //yellow
+const int steering_bPin = 4; //white
 
-const int fasterPaddlePin = 14;
-const int slowerPaddlePin = 15;
+const int fasterPaddlePin = 6; //blue
+const int slowerPaddlePin = 15; //pink
 
 uint8_t rx=255; //TODO: receive battery telemetry from dirtCrusher
 
@@ -40,23 +40,23 @@ void setup() {
   //digitalWrite(HC12_SETpin, !commandMode);
 
   //Controller pins
+  digitalWrite(xPin,LOW);
+  digitalWrite(yPin,LOW);
   pinMode(xPin,INPUT);
   pinMode(yPin,INPUT);
   pinMode(throttle_aPin,INPUT_PULLUP);
   pinMode(throttle_bPin,INPUT_PULLUP);
   pinMode(steering_aPin,INPUT_PULLUP);
-  pinMode(steering_aPin,INPUT_PULLUP);
+  pinMode(steering_bPin,INPUT_PULLUP);
   pinMode(fasterPaddlePin,INPUT_PULLUP);
   pinMode(slowerPaddlePin,INPUT_PULLUP);  
-
-  digitalWrite(xPin,LOW);
-  digitalWrite(yPin,LOW);
 }
 
 unsigned int TXPERIOD = 100; //10 transmits per second.. seems kinda low..
 unsigned long lastTXtime=0;
 void loop() {
 
+  checkPaddles();
   uint8_t throttleVal = 3 + readStick(xPin, yPin, throttle_aPin, throttle_bPin); //-3 to 3 -> 0 to 6
   uint8_t steeringVal = 3 + readStick(xPin, yPin, steering_aPin, steering_bPin);
 
@@ -93,7 +93,6 @@ int checkPaddles()
 
   if(digitalRead(fasterPaddlePin)) lastState_fasterPaddle = HIGH; //reset last state  
   if(digitalRead(slowerPaddlePin)) lastState_slowerPaddle = HIGH; //reset last state
-
 
 }
 
