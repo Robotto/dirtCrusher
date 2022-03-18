@@ -11,9 +11,11 @@ uint8_t batt=255;
 
 DRV8871 steeringDriver(7,8);
 
+//PWM STUFF:
 const int motorPin = 9;
-
 const unsigned int STOP_PWM_VAL = 127;
+
+
 
 void setup() {
   Serial1.begin(1200);
@@ -22,7 +24,20 @@ void setup() {
   pinMode(steeringFeedbackPinB,INPUT_PULLUP);
   pinMode(steeringFeedbackPinC,INPUT_PULLUP);
   pinMode(motorPin,OUTPUT);
+
+  /* PRESCALE DIVIDER FOR PWM FRQ ON PINS 9 and 10:
+  16'000'000 / 256 / 2 = 31250Hz 
+            0x01 1 31250
+            0x02 8 3906.25
+            0x03 64 488.28125
+            0x04 256 122.0703125
+            0x05 1024 30.517578125
+*/
+
+
+  TCCR1B = TCCR1B & 0b11111000 | 0x04;
   analogWrite(motorPin,STOP_PWM_VAL);
+
 }
 
 uint8_t rx;
@@ -31,8 +46,8 @@ int failsafeTimeout = 500; //ms
 
 void loop(){
   if (Serial1.available()) {
-    Serial1.write(batt);
     rx=Serial1.read();
+    Serial1.write(batt);
     nextFailsafeTimeout = millis() + failsafeTimeout;
   }
   if(millis() > nextFailsafeTimeout) rx = failsafeVal;
@@ -45,7 +60,8 @@ void loop(){
                       //    1-3                -3-3
   int throttlePWMdiff = speedFactor * 14 * throttle; // 127/(3*3) = 14.11
   uint8_t pwmVal = STOP_PWM_VAL + throttlePWMdiff;
-  analogWrite(motorPin, pwmVal);
+  int mapVal = map(pwmVal,0,255,31,62);
+  analogWrite(motorPin, mapVal);
   
   int steeringDelta = steering-readSteeringFeedback(); 
   //TODO: check direction of steering driver vs left/right
@@ -55,8 +71,10 @@ void loop(){
 
   batt=readBatt();
 
-  Serial.print("RX: "); Serial.print(rx,BIN); Serial.print(" -> throttle="); Serial.print(throttle); Serial.print(", steering="); Serial.print(steering); Serial.print("speedFactor="); Serial.println(speedFactor);
-  Serial.print("pwmVal="); Serial.print(pwmVal); Serial.print(", steeringDelta="); Serial.println(steeringDelta);  
+//  if(rx != failsafeVal) Serial.print("RX: "); Serial.print(rx,BIN); Serial.print(" -> throttle="); Serial.print(throttle); Serial.print(", steering="); Serial.print(steering); Serial.print(", SpeedFactor="); Serial.print(speedFactor); Serial.print(", pwmVal="); Serial.print(pwmVal); Serial.print(", SteeringDelta="); Serial.print(steeringDelta); Serial.print(", Batt:"); Serial.println(batt);
+
+//  Serial.print(pwmVal);Serial.print(',');Serial.println(mapVal);
+
 }
 
 int readSteeringFeedback(){ //negative is turning left!
