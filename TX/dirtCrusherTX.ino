@@ -1,6 +1,7 @@
 #include <U8g2lib.h>
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0); 
 
+//https://forum.arduino.cc/t/u8glib-and-bitmap-creation-display/148125/2
 #define car_width 20
 #define car_height 15
 static const unsigned char car_bits[] U8X8_PROGMEM = {
