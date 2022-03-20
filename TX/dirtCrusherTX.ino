@@ -1,6 +1,22 @@
 #include <U8g2lib.h>
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0); 
 
+#define car_width 20
+#define car_height 15
+static const unsigned char car_bits[] U8X8_PROGMEM = {
+   0x3c, 0xcf, 0x03, 0xe0, 0x7f, 0x00, 0xf0, 0xff, 0x00, 0x38, 0xc0, 0x00,
+   0x18, 0xc0, 0x01, 0x1f, 0x80, 0x0f, 0xfe, 0xff, 0x07, 0xfe, 0xff, 0x07,
+   0xe6, 0x7f, 0x06, 0xc2, 0x3f, 0x04, 0xe6, 0x7f, 0x06, 0xfe, 0xff, 0x07,
+   0xfc, 0xff, 0x03, 0x1c, 0x80, 0x03, 0x1c, 0x80, 0x03 };
+
+#define controller_width 20
+#define controller_height 14
+static const unsigned char controller_bits[] U8X8_PROGMEM = {
+   0x00, 0x02, 0x00, 0x00, 0x02, 0x00, 0x00, 0x02, 0x00, 0xf0, 0xff, 0x00,
+   0x0c, 0x00, 0x03, 0x02, 0x00, 0x04, 0x01, 0x00, 0x08, 0x11, 0x40, 0x08,
+   0x39, 0xe0, 0x08, 0x11, 0x40, 0x08, 0x01, 0x00, 0x08, 0x02, 0x00, 0x04,
+   0xc4, 0x1f, 0x02, 0x38, 0xe0, 0x01 };
+
 const int HC12_SETpin = 8; //command pin
 bool HC12_commandMode = false;
 
@@ -17,8 +33,10 @@ const int steering_bPin = 4; //white
 const int fasterPaddlePin = 6; //blue
 const int slowerPaddlePin = 15; //pink
 
-uint8_t rxBatt=0; 
+uint8_t rxBatt=111; //battery status should go from 0-100%, but integer underflows will make the data weird.
 uint8_t txBatt=255; 
+const unsigned long telemetryTimeout = 1000;
+unsigned long lastTelemetryRXtime = 0;
 
 // stick states: 3 is center (neutral)
 // 0 1 2 3 4 5 6
@@ -67,7 +85,7 @@ void setup() {
   pinMode(slowerPaddlePin,INPUT_PULLUP);  
 }
 
-unsigned int TXPERIOD = 100; //10 transmits per second.. seems kinda low..
+unsigned int TXPERIOD = 200; //10 transmits per second.. seems kinda low..
 unsigned long lastTXtime=0;
 void loop() {
 
@@ -77,8 +95,13 @@ void loop() {
 
   uint8_t payload = speed << 6 | steeringVal << 3 | throttleVal; ///JOIN THE VALUES into one byte
 
-  if(Serial1.available()) rxBatt = Serial1.read();
+  if(Serial1.available()) 
+  {
+    rxBatt = Serial1.read();
+    lastTelemetryRXtime=millis();
+  }
 
+  if(millis()-lastTelemetryRXtime > telemetryTimeout) rxBatt = 111;
 
   if(millis()-lastTXtime > TXPERIOD) {
     Serial1.write(payload); //SEND IT!
@@ -175,17 +198,26 @@ void redraw()
   
   if(rxBatt != lastRxPercent || txBatt != lastTxPercent){
     u8g2.clearBuffer();					// clear the internal memory
+/*
     u8g2.setCursor(0,13);
     u8g2.print("RX:");
     u8g2.setCursor(0,30);
     u8g2.print("TX:");  
+*/
+    u8g2.drawXBMP( 0, 0, car_width, car_height, car_bits);
+    u8g2.drawXBMP( 0, car_height+3, controller_width, controller_height, controller_bits);
+
+    
     u8g2.setDrawColor(1);
-    u8g2.drawBox(28,0,rxBatt,15);
+    if(rxBatt<110) u8g2.drawBox(28,0,rxBatt,15);
     u8g2.drawBox(28,17,txBatt,15);
     u8g2.setDrawColor(2);
     u8g2.setCursor(60,13);
-    u8g2.print(rxBatt);
-    u8g2.print("%");
+    if(rxBatt>110) u8g2.print("?");
+    else {
+      u8g2.print(rxBatt);
+      u8g2.print("%");
+    }
     u8g2.setCursor(60,30);
     u8g2.print(txBatt);
     u8g2.print("%");
@@ -194,3 +226,4 @@ void redraw()
     u8g2.sendBuffer();         // transfer internal memory to the display
   }
 }
+
