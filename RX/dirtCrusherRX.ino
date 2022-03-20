@@ -8,14 +8,11 @@ const int steeringFeedbackPinC = 6;
 int previousState = 0; //holds steering feedback position from last read.
 uint8_t batt=255;
 
-
 DRV8871 steeringDriver(7,8);
 
 //PWM STUFF:
 const int motorPin = 9;
 const unsigned int STOP_PWM_VAL = 127;
-
-
 
 void setup() {
   Serial1.begin(1200);
@@ -71,7 +68,7 @@ void loop(){
 
   batt=readBatt();
 
-//  if(rx != failsafeVal) Serial.print("RX: "); Serial.print(rx,BIN); Serial.print(" -> throttle="); Serial.print(throttle); Serial.print(", steering="); Serial.print(steering); Serial.print(", SpeedFactor="); Serial.print(speedFactor); Serial.print(", pwmVal="); Serial.print(pwmVal); Serial.print(", SteeringDelta="); Serial.print(steeringDelta); Serial.print(", Batt:"); Serial.println(batt);
+  if(rx != failsafeVal) Serial.print("RX: "); Serial.print(rx,BIN); Serial.print(" -> throttle="); Serial.print(throttle); Serial.print(", steering="); Serial.print(steering); Serial.print(", SpeedFactor="); Serial.print(speedFactor); Serial.print(", pwmVal="); Serial.print(pwmVal); Serial.print(", SteeringDelta="); Serial.print(steeringDelta); Serial.print(", Batt:"); Serial.println(batt);
 
 //  Serial.print(pwmVal);Serial.print(',');Serial.println(mapVal);
 
@@ -108,20 +105,18 @@ Nsamples:	Duration [uS]:  Shifts:
 128	      14848           7
 */
 
-// 7.0V -> 213 , 8.4V->255
-uint8_t readBatt(){
-  unsigned long ADCSum = 0;
-  for (int i=0; i<N_MEASUREMENTS; i++) ADCSum+=analogRead(ADCpin); 
-  return (uint8_t)(ADCSum>>8);  //shift down from N_MEASUREMENTS, and also divide by 4 to fit data in one byte
-}
-/*
+
 uint8_t readBatt(){
   //Do a bunch of ADC measurements and convert them to average Vbatt, append Vbatt to report
   unsigned long ADCSum = 0;
   for (int i=0; i<N_MEASUREMENTS; i++) ADCSum+=analogRead(ADCpin); 
   unsigned int ADCavg = ADCSum/N_MEASUREMENTS;
   float vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
-          //Vbatt minimum = 7.0, VbattMaximum = 8.4
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
-*/
+// 7.0V -> 213 , 8.4V->255
+/*uint8_t readBatt(){
+  unsigned long ADCSum = 0;
+  for (int i=0; i<N_MEASUREMENTS; i++) ADCSum+=analogRead(ADCpin); 
+  return (uint8_t)(ADCSum>>8);  //shift down from N_MEASUREMENTS, and also divide by 4 to fit data in one byte
+}*/
