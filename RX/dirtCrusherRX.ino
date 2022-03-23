@@ -51,7 +51,7 @@ void loop(){
   
   //Parse received data:
   int throttle = -3+(rx&0b00000111);
-  int steering = -3+((rx&0b00111000)>>3);
+  int steering = (-3+((rx&0b00111000)>>3))*(-1); //-1 reverses steering direction.
   uint8_t speedFactor = (rx&0b11000000)>>6;
 
                       //    1-3                -3-3
@@ -64,11 +64,12 @@ void loop(){
   //TODO: check direction of steering driver vs left/right
   if(steeringDelta<0) steeringDriver.forward();//need to go left
   else if(steeringDelta>0) steeringDriver.reverse();//need to go right
-  else steeringDriver.brake(); //need to go nowhere
+  //else steeringDriver.brak(e(); //need to go nowhere
+  else steeringDriver.coast();
 
   batt=readBatt();
 
-  if(rx != failsafeVal) Serial.print("RX: "); Serial.print(rx,BIN); Serial.print(" -> throttle="); Serial.print(throttle); Serial.print(", steering="); Serial.print(steering); Serial.print(", SpeedFactor="); Serial.print(speedFactor); Serial.print(", pwmVal="); Serial.print(pwmVal); Serial.print(", SteeringDelta="); Serial.print(steeringDelta); Serial.print(", Batt:"); Serial.println(batt);
+// if(rx != failsafeVal) Serial.print("RX: "); Serial.print(rx,BIN); Serial.print(" -> throttle="); Serial.print(throttle); Serial.print(", steering="); Serial.print(steering); Serial.print(", SpeedFactor="); Serial.print(speedFactor); Serial.print(", pwmVal="); Serial.print(pwmVal); Serial.print(", SteeringDelta="); Serial.print(steeringDelta); Serial.print(", Batt:"); Serial.println(batt);
 
 //  Serial.print(pwmVal);Serial.print(',');Serial.println(mapVal);
 
@@ -94,7 +95,7 @@ int readSteeringFeedback(){ //negative is turning left!
 #define V_DIVIDER_MAX_OUT 5.0
 #define DIVIDER_FACTOR 0.595     //Factor = 1-(R1/(R1+R2)) = V_BATTMAX / V_DIVIDER_MAX_OUT
 #define V_CALIBATED_OFFSET 0.06
-#define N_MEASUREMENTS 64
+#define N_MEASUREMENTS 16
 
 /*
 ADC takes about 116uS pr sample:
@@ -105,7 +106,7 @@ Nsamples:	Duration [uS]:  Shifts:
 128	      14848           7
 */
 
-
+/*
 uint8_t readBatt(){
   //Do a bunch of ADC measurements and convert them to average Vbatt, append Vbatt to report
   unsigned long ADCSum = 0;
@@ -114,9 +115,10 @@ uint8_t readBatt(){
   float vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
+*/
 // 7.0V -> 213 , 8.4V->255
-/*uint8_t readBatt(){
+uint8_t readBatt(){
   unsigned long ADCSum = 0;
   for (int i=0; i<N_MEASUREMENTS; i++) ADCSum+=analogRead(ADCpin); 
-  return (uint8_t)(ADCSum>>8);  //shift down from N_MEASUREMENTS, and also divide by 4 to fit data in one byte
-}*/
+  return (uint8_t) map(ADCSum>>6,213,255,0,100);  //shift down from N_MEASUREMENTS, and also divide by 4 to fit data in one byte
+}
