@@ -59,12 +59,12 @@ void loop(){
   uint8_t pwmVal = STOP_PWM_VAL + throttlePWMdiff;
   int mapVal = map(pwmVal,0,255,31,62);
   analogWrite(motorPin, mapVal);
+  previousState = readSteeringFeedback();
+  int steeringDelta = steering-previousState; 
   
-  int steeringDelta = steering-readSteeringFeedback(); 
-  //TODO: check direction of steering driver vs left/right
   if(steeringDelta<0) steeringDriver.forward();//need to go left
   else if(steeringDelta>0) steeringDriver.reverse();//need to go right
-  else steeringDriver.brak(e(); //need to go nowhere
+  else steeringDriver.brake(); //need to go nowhere
   
 
   batt=readBatt();
@@ -79,7 +79,28 @@ int readSteeringFeedback(){ //negative is turning left!
   int aState = digitalRead(steeringFeedbackPinA);
   int bState = digitalRead(steeringFeedbackPinB);
   int cState = digitalRead(steeringFeedbackPinC);
+/*
+  uint8_t state = aState + bState<<1 + cState <<2;
 
+  switch (state) {
+    case 7:
+      return previousState;
+    case 0:
+      return -3;
+    case 1:
+      return -2;
+    case 5:
+      return -1;
+    case 4:
+      return 0;
+    case 6:
+      return 1;
+    case 2:
+      return 2;
+    case 3:
+      return 3;
+  }
+*/
   if( aState & bState & cState ) return previousState; //non-discrete in-between-state with all pins high - Keep moving the steering.
   //Now we know the feedback is in a discrete state:
   if( bState ) return 2-cState+aState; //Steering feedback is positive (1,2,3)
