@@ -64,8 +64,8 @@ void loop(){
   //TODO: check direction of steering driver vs left/right
   if(steeringDelta<0) steeringDriver.forward();//need to go left
   else if(steeringDelta>0) steeringDriver.reverse();//need to go right
-  //else steeringDriver.brak(e(); //need to go nowhere
-  else steeringDriver.coast();
+  else steeringDriver.brak(e(); //need to go nowhere
+  
 
   batt=readBatt();
 
