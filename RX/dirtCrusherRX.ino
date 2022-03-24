@@ -1,7 +1,7 @@
 #include "drv8871.h"
 
 const uint8_t failsafeVal = 0b01011011;
-const int ADCpin = A3;
+const int ADCpin = A0;
 const int steeringFeedbackPinA = 4;
 const int steeringFeedbackPinB = 5;
 const int steeringFeedbackPinC = 6;
@@ -59,16 +59,15 @@ void loop(){
   uint8_t pwmVal = STOP_PWM_VAL + throttlePWMdiff;
   int mapVal = map(pwmVal,0,255,31,62);
   analogWrite(motorPin, mapVal);
+
   previousState = readSteeringFeedback();
   int steeringDelta = steering-previousState; 
-  
   if(steeringDelta<0) steeringDriver.forward();//need to go left
   else if(steeringDelta>0) steeringDriver.reverse();//need to go right
   else steeringDriver.brake(); //need to go nowhere
   
 
   batt=readBatt();
-
 // if(rx != failsafeVal) Serial.print("RX: "); Serial.print(rx,BIN); Serial.print(" -> throttle="); Serial.print(throttle); Serial.print(", steering="); Serial.print(steering); Serial.print(", SpeedFactor="); Serial.print(speedFactor); Serial.print(", pwmVal="); Serial.print(pwmVal); Serial.print(", SteeringDelta="); Serial.print(steeringDelta); Serial.print(", Batt:"); Serial.println(batt);
 
 //  Serial.print(pwmVal);Serial.print(',');Serial.println(mapVal);
@@ -109,13 +108,13 @@ int readSteeringFeedback(){ //negative is turning left!
 }
 
 //Voltage divider: VBATT -> 51K <-ADC-> 75K -> GND
-#define V_BATTMAX 8.4
-#define V_BATTMIN 7.0
-#define V_ADCMAX 5.0
-#define ADCMAX 1023.0
-#define V_DIVIDER_MAX_OUT 5.0
-#define DIVIDER_FACTOR 0.595     //Factor = 1-(R1/(R1+R2)) = V_BATTMAX / V_DIVIDER_MAX_OUT
-#define V_CALIBATED_OFFSET 0.06
+#define V_BATTMAX 8.4f
+#define V_BATTMIN 7.0f
+#define V_ADCMAX 5.0f
+#define ADCMAX 1023
+#define V_DIVIDER_MAX_OUT 5.0f
+#define DIVIDER_FACTOR 0.595f     //Factor = 1-(R1/(R1+R2)) = V_BATTMAX / V_DIVIDER_MAX_OUT
+#define V_CALIBATED_OFFSET 0.03f
 #define N_MEASUREMENTS 16
 
 /*
@@ -127,7 +126,7 @@ Nsamples:	Duration [uS]:  Shifts:
 128	      14848           7
 */
 
-/*
+
 uint8_t readBatt(){
   //Do a bunch of ADC measurements and convert them to average Vbatt, append Vbatt to report
   unsigned long ADCSum = 0;
@@ -136,10 +135,12 @@ uint8_t readBatt(){
   float vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
-*/
+
+//FAST ADC
 // 7.0V -> 213 , 8.4V->255
+/*
 uint8_t readBatt(){
   unsigned long ADCSum = 0;
   for (int i=0; i<N_MEASUREMENTS; i++) ADCSum+=analogRead(ADCpin); 
   return (uint8_t) map(ADCSum>>6,213,255,0,100);  //shift down from N_MEASUREMENTS, and also divide by 4 to fit data in one byte
-}
+}*/
