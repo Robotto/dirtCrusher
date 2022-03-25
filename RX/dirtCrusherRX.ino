@@ -15,8 +15,8 @@ const int motorPin = 9;
 const unsigned int STOP_PWM_VAL = 127;
 
 void setup() {
-  Serial1.begin(1200);
-  Serial.begin(115200);
+  Serial1.begin(115200);
+  //Serial.begin(115200);
   pinMode(steeringFeedbackPinA,INPUT_PULLUP);
   pinMode(steeringFeedbackPinB,INPUT_PULLUP);
   pinMode(steeringFeedbackPinC,INPUT_PULLUP);
@@ -34,6 +34,16 @@ void setup() {
 
   TCCR1B = TCCR1B & 0b11111000 | 0x04;
   analogWrite(motorPin,STOP_PWM_VAL);
+  
+  
+  //DANCE!
+  for(int i=0;i<3;i++){
+  while(readSteeringFeedback()>-3) steeringDriver.forward();//need to go left
+  steeringDriver.brake();
+  while(readSteeringFeedback()<3) steeringDriver.reverse();//need to go right
+  }
+  while(readSteeringFeedback()>0) steeringDriver.forward();//need to go left
+  steeringDriver.brake();
 
 }
 
@@ -115,7 +125,7 @@ int readSteeringFeedback(){ //negative is turning left!
 #define V_DIVIDER_MAX_OUT 5.0f
 #define DIVIDER_FACTOR 0.595f     //Factor = 1-(R1/(R1+R2)) = V_BATTMAX / V_DIVIDER_MAX_OUT
 #define V_CALIBATED_OFFSET 0.03f
-#define N_MEASUREMENTS 16
+#define N_MEASUREMENTS 8
 
 /*
 ADC takes about 116uS pr sample:

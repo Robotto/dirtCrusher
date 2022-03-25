@@ -2,6 +2,9 @@
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0); 
 
 //https://forum.arduino.cc/t/u8glib-and-bitmap-creation-display/148125/2
+
+
+//CAR ICON:
 #define car_width 20
 #define car_height 15
 static const unsigned char car_bits[] U8X8_PROGMEM = {
@@ -10,6 +13,7 @@ static const unsigned char car_bits[] U8X8_PROGMEM = {
    0xe6, 0x7f, 0x06, 0xc2, 0x3f, 0x04, 0xe6, 0x7f, 0x06, 0xfe, 0xff, 0x07,
    0xfc, 0xff, 0x03, 0x1c, 0x80, 0x03, 0x1c, 0x80, 0x03 };
 
+//CONTROLLER ICON:
 #define controller_width 20
 #define controller_height 14
 static const unsigned char controller_bits[] U8X8_PROGMEM = {
@@ -58,8 +62,8 @@ uint8_t speed = 1;
                 */
 
 void setup() {
-  Serial.begin(115200);
-  Serial1.begin(1200);
+//  Serial.begin(115200);
+  Serial1.begin(115200);
 
   u8g2.begin();
   u8g2.setDisplayRotation(U8G2_R2);
@@ -86,8 +90,11 @@ void setup() {
   pinMode(slowerPaddlePin,INPUT_PULLUP);  
 }
 
-unsigned int TXPERIOD = 200; //10 transmits per second.. seems kinda low..
-unsigned long lastTXtime=0;
+unsigned int TXPERIOD = 300; //400 ms between transmits seems kinda high, but code will also transmit immediately on state change.
+unsigned int FRAMERATE = 1000;
+unsigned long lastTXtime = 0;
+unsigned long lastRedraw = 0;
+uint8_t lastPayload;
 void loop() {
 
   checkPaddles();
@@ -104,14 +111,18 @@ void loop() {
 
   if(millis()-lastTelemetryRXtime > telemetryTimeout) rxBatt = 111;
 
-  if(millis()-lastTXtime > TXPERIOD) {
+  if(millis()-lastTXtime > TXPERIOD || payload != lastPayload) { 
     Serial1.write(payload); //SEND IT!
     lastTXtime=millis();
-
-    //also do things with battery percentages...
-    txBatt = readBatt();
-    redraw();
+    lastPayload=payload;
   }
+
+  if(millis()-lastRedraw > FRAMERATE){
+  txBatt = readBatt();
+  redraw();
+  lastRedraw=millis();
+  }
+
 
 
 }
@@ -123,7 +134,7 @@ void loop() {
 #define V_DIVIDER_MAX_OUT 4.2
 #define DIVIDER_FACTOR 1.0
 #define V_CALIBATED_OFFSET 0.0
-#define N_MEASUREMENTS 64
+#define N_MEASUREMENTS 16
 
 uint8_t readBatt(){
   //Do a bunch of ADC measurements and convert them to average Vbatt, append Vbatt to report
