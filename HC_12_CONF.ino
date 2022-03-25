@@ -7,7 +7,9 @@ wait 40ms for command mode to engage
 */
 
 #define MODE_SWITCHING_ENABLED
-const int SETpin = 3; //command pin
+
+//const int SETpin = 8; //command pin on dirtcrusher TX
+const int SETpin = 3; //command pin on dirtcrusher RX
 bool commandMode = false;
 
 void setup() {
@@ -28,10 +30,12 @@ void setup() {
 #endif
 
 //AT+RX gives current setup:
-//OK+B1200
-//OK+RC001
+//OK+B115200
+//OK+RC127
 //OK+RP:+20dBm
 //OK+FU3
+
+//AT+V giver firmware version. make sure versions match between receiver and transmitter
 
 }
 
