@@ -63,7 +63,7 @@ uint8_t speed = 1;
 
 void setup() {
 //  Serial.begin(115200);
-  Serial1.begin(115200);
+  Serial1.begin(19200);
 
   u8g2.begin();
   u8g2.setDisplayRotation(U8G2_R2);

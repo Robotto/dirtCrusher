@@ -19,7 +19,7 @@ void setup() {
   //Serial1.begin(9600);
   //Serial1.begin(1200);
   //Serial1.begin(19200);
-  Serial1.begin(115200);
+  Serial1.begin(19200);
   
   pinMode(SETpin, OUTPUT);
   digitalWrite(SETpin, !commandMode);

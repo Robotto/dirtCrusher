@@ -15,7 +15,7 @@ const int motorPin = 9;
 const unsigned int STOP_PWM_VAL = 127;
 
 void setup() {
-  Serial1.begin(115200);
+  Serial1.begin(19200);
   //Serial.begin(115200);
   pinMode(steeringFeedbackPinA,INPUT_PULLUP);
   pinMode(steeringFeedbackPinB,INPUT_PULLUP);
