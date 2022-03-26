@@ -8,8 +8,8 @@ wait 40ms for command mode to engage
 
 #define MODE_SWITCHING_ENABLED
 
-//const int SETpin = 8; //command pin on dirtcrusher TX
-const int SETpin = 3; //command pin on dirtcrusher RX
+const int SETpin = 8; //command pin on dirtcrusher TX
+//const int SETpin = 3; //command pin on dirtcrusher RX
 bool commandMode = false;
 
 void setup() {
@@ -19,7 +19,7 @@ void setup() {
   //Serial1.begin(9600);
   //Serial1.begin(1200);
   //Serial1.begin(19200);
-  Serial1.begin(19200);
+  Serial1.begin(9600);
   
   pinMode(SETpin, OUTPUT);
   digitalWrite(SETpin, !commandMode);

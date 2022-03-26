@@ -63,7 +63,7 @@ uint8_t speed = 1;
 
 void setup() {
 //  Serial.begin(115200);
-  Serial1.begin(19200);
+  Serial1.begin(9600);
 
   u8g2.begin();
   u8g2.setDisplayRotation(U8G2_R2);
@@ -90,7 +90,7 @@ void setup() {
   pinMode(slowerPaddlePin,INPUT_PULLUP);  
 }
 
-unsigned int TXPERIOD = 300; //400 ms between transmits seems kinda high, but code will also transmit immediately on state change.
+unsigned int TXPERIOD = 300; //300 ms between transmits seems kinda high, but code will also transmit immediately on state change.
 unsigned int FRAMERATE = 1000;
 unsigned long lastTXtime = 0;
 unsigned long lastRedraw = 0;

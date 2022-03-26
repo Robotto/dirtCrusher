@@ -15,7 +15,7 @@ const int motorPin = 9;
 const unsigned int STOP_PWM_VAL = 127;
 
 void setup() {
-  Serial1.begin(19200);
+  Serial1.begin(9600);
   //Serial.begin(115200);
   pinMode(steeringFeedbackPinA,INPUT_PULLUP);
   pinMode(steeringFeedbackPinB,INPUT_PULLUP);
@@ -33,18 +33,6 @@ void setup() {
 
 
   TCCR1B = TCCR1B & 0b11111000 | 0x04;
-  analogWrite(motorPin,STOP_PWM_VAL);
-  
-  
-  //DANCE!
-  for(int i=0;i<3;i++){
-  while(readSteeringFeedback()>-3) steeringDriver.forward();//need to go left
-  steeringDriver.brake();
-  while(readSteeringFeedback()<3) steeringDriver.reverse();//need to go right
-  }
-  while(readSteeringFeedback()>0) steeringDriver.forward();//need to go left
-  steeringDriver.brake();
-
 }
 
 uint8_t rx;
