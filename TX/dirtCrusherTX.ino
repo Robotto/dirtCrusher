@@ -1,3 +1,12 @@
+#include <SPI.h>
+#include "RF24.h"
+const unsigned int NRF_CE_PIN = 10;
+const unsigned int NRF_CSN_PIN = A1;
+RF24 radio(NRF_CE_PIN, NRF_CSN_PIN); // using pin 8 for the CE pin, and pin 8 for the CSN pin
+uint8_t address[][3] = {"TX", "RX"};
+// uniquely identify which address this radio will use to transmit
+bool radioNumber = 0; // 0 uses address[0] to transmit, 1 uses address[1] to transmit
+
 #include <U8g2lib.h>
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0); 
 
@@ -22,12 +31,18 @@ static const unsigned char controller_bits[] U8X8_PROGMEM = {
    0x39, 0xe0, 0x08, 0x11, 0x40, 0x08, 0x01, 0x00, 0x08, 0x02, 0x00, 0x04,
    0xc4, 0x1f, 0x02, 0x38, 0xe0, 0x01 };
 
-const int HC12_SETpin = 8; //command pin
-bool HC12_commandMode = false;
+#define antenna_width 20
+#define antenna_height 15
+static const unsigned char antenna_bits[] U8X8_PROGMEM = {
+  0x08, 0x00, 0x01, 0x0C, 0x00, 0x03, 0x26, 0x40, 0x06, 0x36, 0xC0, 0x06, 
+  0x33, 0xC6, 0x0C, 0x13, 0x8F, 0x0C, 0x93, 0x9F, 0x0C, 0x13, 0x8F, 0x0C, 
+  0x37, 0xC6, 0x0E, 0x26, 0x46, 0x06, 0x0E, 0x06, 0x07, 0x0C, 0x06, 0x03, 
+  0x00, 0x06, 0x00, 0x00, 0x06, 0x00, 0x00, 0x0F, 0x00};
+
 
 const int ADCpin = A0;
 
-const int xPin = 14; //ORANGE
+const int xPin = 8; //ORANGE 
 const int yPin = 5; //GREEN
 const int throttle_aPin = A3; //yellow
 const int throttle_bPin = A2; //WHITE
@@ -36,7 +51,7 @@ const int steering_aPin = 7; //yellow
 const int steering_bPin = 4; //white
 
 const int fasterPaddlePin = 6; //blue
-const int slowerPaddlePin = 15; //pink
+const int slowerPaddlePin = 9; //pink 
 
 uint8_t rxBatt=111; //battery status should go from 0-100%, but integer underflows will make the data weird.
 uint8_t txBatt=255; 
@@ -63,19 +78,24 @@ uint8_t speed = 1;
 
 void setup() {
 //  Serial.begin(115200);
-  Serial1.begin(9600);
+//  Serial1.begin(9600);
 
   u8g2.begin();
   u8g2.setDisplayRotation(U8G2_R2);
   u8g2.setFont(u8g_font_unifont); //11 pixels high?
   u8g2.setFontMode(1); //transparent font
   
-
+  if (!radio.begin()) {
+        Serial.println(F("radio hardware is not responding!!"));
+        u8g2.print("NRF failed to init.");
+        u8g2.sendBuffer();         // transfer internal memory to the display
+        while (1) {} // hold in infinite loop
+    }
+  
+  nrf24Setup();
   redraw();
   //u8g2.sendBuffer();         // transfer internal memory to the display
 
-  //pinMode(HC12_SETpin, OUTPUT);
-  //digitalWrite(HC12_SETpin, !commandMode);
 
   //Controller pins
   digitalWrite(xPin,LOW);
@@ -90,11 +110,17 @@ void setup() {
   pinMode(slowerPaddlePin,INPUT_PULLUP);  
 }
 
-unsigned int TXPERIOD = 300; //300 ms between transmits seems kinda high, but code will also transmit immediately on state change.
+unsigned int TXPERIOD = 20; //ms between transmits seems kinda high, but code will also transmit immediately on state change.
 unsigned int FRAMERATE = 1000;
 unsigned long lastTXtime = 0;
 unsigned long lastRedraw = 0;
 uint8_t lastPayload;
+
+uint8_t pipe;
+uint8_t ARC; //automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
+
+//TODO: USE ARC TO ESTIMATE LINK QUALITY
+
 void loop() {
 
   checkPaddles();
@@ -103,28 +129,35 @@ void loop() {
 
   uint8_t payload = speed << 6 | steeringVal << 3 | throttleVal; ///JOIN THE VALUES into one byte
 
+/*
   if(Serial1.available()) 
   {
     rxBatt = Serial1.read();
     lastTelemetryRXtime=millis();
   }
-
+*/
   if(millis()-lastTelemetryRXtime > telemetryTimeout) rxBatt = 111;
 
-  if(millis()-lastTXtime > TXPERIOD || payload != lastPayload) { 
-    Serial1.write(payload); //SEND IT!
-    lastTXtime=millis();
-    lastPayload=payload;
+  if(millis()-lastTXtime > TXPERIOD || payload != lastPayload) 
+  { 
+    //Serial1.write(payload); //SEND IT!
+    bool report = radio.write(&payload, 1);    // transmit & save the report
+    if (report) 
+        {
+            ARC = radio.getARC(); //get automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
+            if (radio.available(&pipe)) radio.read(&rxBatt,1); // get incoming ACK payload (should be one byte)
+            else Serial.println(F(" Recieved: an empty ACK packet?!")); // empty ACK packet received   
+            lastTXtime=millis();
+            lastPayload=payload;
+        }
   }
 
-  if(millis()-lastRedraw > FRAMERATE){
-  txBatt = readBatt();
-  redraw();
-  lastRedraw=millis();
+  if(millis()-lastRedraw > FRAMERATE)
+  {
+      txBatt = readBatt();
+      redraw();
+      lastRedraw=millis();   
   }
-
-
-
 }
 //Voltage divider: VBATT -> 51K <-ADC-> 75K -> GND
 #define V_BATTMAX 4.2
@@ -239,3 +272,18 @@ void redraw()
   }
 }
 
+void nrf24Setup()
+{
+    radio.setDataRate(RF24_250KBPS);
+    radio.setPALevel(RF24_PA_MAX);     // RF24_PA_MAX is default.
+    radio.setRetries(5,15); //delay: The default value of 5 means 1500us (5 * 250 + 250), count:  The default/maximum is 15. Use 0 to disable the auto-retry feature all together.
+    // to use ACK payloads, we need to enable dynamic payload lengths (for all nodes)
+    radio.enableDynamicPayloads();    // ACK payloads are dynamically sized
+    // Acknowledgement packets have no payloads by default. We need to enable
+    // this feature for all nodes (TX & RX) to use ACK payloads.
+    radio.enableAckPayload();
+    // set the TX address of the RX node into the TX pipe
+    radio.openWritingPipe(address[radioNumber]);     // using pipe 0
+    // set the RX address of the TX node into a RX pipe
+    radio.openReadingPipe(1, address[!radioNumber]); // using pipe 1
+}
