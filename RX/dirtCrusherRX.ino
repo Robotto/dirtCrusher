@@ -28,7 +28,7 @@ const unsigned int STOP_PWM_VAL = 127;
 
 void setup() {
   //Serial1.begin(9600);
-  Serial.begin(115200);
+  //Serial.begin(115200);
 
   pinMode(steeringFeedbackPinA,INPUT_PULLUP);
   pinMode(steeringFeedbackPinB,INPUT_PULLUP);
@@ -46,7 +46,7 @@ void setup() {
   TCCR1B = TCCR1B & 0b11111000 | 0x04;
 
   if (!radio.begin()) {
-        Serial.println(F("radio hardware is not responding!!"));
+        //Serial.println(F("radio hardware is not responding!!"));
         while (1) {} // hold in infinite loop
     }
 
@@ -89,7 +89,7 @@ void loop(){
       radio.read(&rx, 1);       // get incoming payload
       //ackPayload++;
       radio.writeAckPayload(1, &batt, 1);
-      Serial.print("RX!: "); Serial.println(rx,BIN);
+      //Serial.print("RX!: "); Serial.println(rx,BIN);
       nextFailsafeTimeout = millis() + failsafeTimeout;
     }
   if(millis() > nextFailsafeTimeout) rx = failsafeVal;
