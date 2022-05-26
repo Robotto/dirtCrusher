@@ -1,4 +1,16 @@
 #include "drv8871.h"
+#include <SPI.h>
+#include "RF24.h"
+
+const unsigned int NRF_CE_PIN = 10;
+const unsigned int NRF_CSN_PIN = A1;
+
+RF24 radio(NRF_CE_PIN, NRF_CSN_PIN); 
+uint8_t address[][3] = {"TX", "RX"};
+
+// uniquely identify which address this radio will use to transmit
+bool radioNumber = 1; // 0 uses address[0] to transmit, 1 uses address[1] to transmit
+
 
 const uint8_t failsafeVal = 0b01011011;
 const int ADCpin = A0;
@@ -15,8 +27,9 @@ const int motorPin = 9;
 const unsigned int STOP_PWM_VAL = 127;
 
 void setup() {
-  Serial1.begin(9600);
-  //Serial.begin(115200);
+  //Serial1.begin(9600);
+  Serial.begin(115200);
+
   pinMode(steeringFeedbackPinA,INPUT_PULLUP);
   pinMode(steeringFeedbackPinB,INPUT_PULLUP);
   pinMode(steeringFeedbackPinC,INPUT_PULLUP);
@@ -30,21 +43,55 @@ void setup() {
             0x04 256 122.0703125
             0x05 1024 30.517578125
 */
-
-
   TCCR1B = TCCR1B & 0b11111000 | 0x04;
+
+  if (!radio.begin()) {
+        Serial.println(F("radio hardware is not responding!!"));
+        while (1) {} // hold in infinite loop
+    }
+
+    radio.setDataRate(RF24_250KBPS);
+    radio.setPALevel(RF24_PA_MAX);     // RF24_PA_MAX is default.
+    //radio.setPayloadSize(1);
+    radio.setRetries(5,15); //delay: The default value of 5 means 1500us (5 * 250 + 250), count:  The default/maximum is 15. Use 0 to disable the auto-retry feature all together.
+
+
+    // to use ACK payloads, we need to enable dynamic payload lengths (for all nodes)
+    radio.enableDynamicPayloads();    // ACK payloads are dynamically sized
+
+    // Acknowledgement packets have no payloads by default. We need to enable
+    // this feature for all nodes (TX & RX) to use ACK payloads.
+    radio.enableAckPayload();
+
+    // set the TX address of the RX node into the TX pipe
+    radio.openWritingPipe(address[radioNumber]);     // using pipe 1
+
+    // set the RX address of the TX node into a RX pipe
+    radio.openReadingPipe(1, address[!radioNumber]); // using pipe 0
+
+    radio.startListening();
 }
 
+uint8_t ackPayload=0;
+uint8_t pipe;
 uint8_t rx;
 unsigned long nextFailsafeTimeout = 0;
 int failsafeTimeout = 500; //ms
 
 void loop(){
-  if (Serial1.available()) {
+  /*if (Serial1.available()) {
     rx=Serial1.read();
     Serial1.write(batt);
     nextFailsafeTimeout = millis() + failsafeTimeout;
-  }
+  }*/
+  if (radio.available(&pipe)) {                    // is there a payload? get the pipe number that recieved it TODO: Is pipe number overhovedet used?!
+      //uint8_t bytes = radio.getDynamicPayloadSize(); // get the size of the payload
+      radio.read(&rx, 1);       // get incoming payload
+      //ackPayload++;
+      radio.writeAckPayload(1, &batt, 1);
+      Serial.print("RX!: "); Serial.println(rx,BIN);
+      nextFailsafeTimeout = millis() + failsafeTimeout;
+    }
   if(millis() > nextFailsafeTimeout) rx = failsafeVal;
   
   //Parse received data:
