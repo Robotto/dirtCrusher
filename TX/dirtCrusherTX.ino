@@ -12,7 +12,6 @@ U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 
 //https://forum.arduino.cc/t/u8glib-and-bitmap-creation-display/148125/2
 
-
 //CAR ICON:
 #define car_width 20
 #define car_height 15
@@ -41,22 +40,24 @@ static const unsigned char antenna_bits[] U8X8_PROGMEM = {
 
 
 const int ADCpin = A0;
-
 const int xPin = 8; //ORANGE 
 const int yPin = 5; //GREEN
 const int throttle_aPin = A3; //yellow
 const int throttle_bPin = A2; //WHITE
-
 const int steering_aPin = 7; //yellow
 const int steering_bPin = 4; //white
-
 const int fasterPaddlePin = 6; //blue
 const int slowerPaddlePin = 9; //pink 
 
-uint8_t rxBatt=111; //battery status should go from 0-100%, but integer underflows will make the data weird.
-uint8_t txBatt=255; 
-const unsigned long telemetryTimeout = 1000;
+#define telemetryTimeout 2500UL
+#define TXPERIOD 20UL
+#define FRAMERATE 1000UL
+
 unsigned long lastTelemetryRXtime = 0;
+unsigned long lastTXtime = 0;
+unsigned long lastRedraw = 0;
+uint8_t lastPayload;
+
 
 // stick states: 3 is center (neutral)
 // 0 1 2 3 4 5 6
@@ -77,11 +78,12 @@ uint8_t speed = 1;
                 */
 
 void setup() {
-//  Serial.begin(115200);
+  Serial.begin(115200);
 //  Serial1.begin(9600);
 
   u8g2.begin();
   u8g2.setDisplayRotation(U8G2_R2);
+  //u8g2.setFont(u8g_font_baby); //11 pixels high?
   u8g2.setFont(u8g_font_unifont); //11 pixels high?
   u8g2.setFontMode(1); //transparent font
   
@@ -93,7 +95,13 @@ void setup() {
     }
   
   nrf24Setup();
-  redraw();
+  
+  u8g2.clearBuffer();					// clear the internal memory
+  u8g2.drawXBMP( 0, 0, car_width, car_height, car_bits);
+  u8g2.drawXBMP( 0, car_height+3, controller_width, controller_height, controller_bits);
+  u8g2.drawXBMP( 64, car_height+3, antenna_width, antenna_height, antenna_bits);
+    
+  redraw(255,readBatt(),0);
   //u8g2.sendBuffer();         // transfer internal memory to the display
 
 
@@ -110,18 +118,13 @@ void setup() {
   pinMode(slowerPaddlePin,INPUT_PULLUP);  
 }
 
-unsigned int TXPERIOD = 20; //ms between transmits seems kinda high, but code will also transmit immediately on state change.
-unsigned int FRAMERATE = 1000;
-unsigned long lastTXtime = 0;
-unsigned long lastRedraw = 0;
-uint8_t lastPayload;
-
-uint8_t pipe;
-uint8_t ARC; //automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
-
 //TODO: USE ARC TO ESTIMATE LINK QUALITY
 
 void loop() {
+  uint8_t telemetryRXByte;
+  uint8_t txBatt;
+  uint8_t pipe;
+  uint8_t ARC; //automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
 
   checkPaddles();
   uint8_t throttleVal = 3 + readStick(xPin, yPin, throttle_aPin, throttle_bPin); //-3 to 3 -> 0 to 6
@@ -129,15 +132,8 @@ void loop() {
 
   uint8_t payload = speed << 6 | steeringVal << 3 | throttleVal; ///JOIN THE VALUES into one byte
 
-/*
-  if(Serial1.available()) 
-  {
-    rxBatt = Serial1.read();
-    lastTelemetryRXtime=millis();
-  }
-*/
-  if(millis()-lastTelemetryRXtime > telemetryTimeout) rxBatt = 111;
-
+  //if(millis() - lastTelemetryRXtime > telemetryTimeout) {telemetryRXByte = 255; Serial.println("boop");}
+ 
   if(millis()-lastTXtime > TXPERIOD || payload != lastPayload) 
   { 
     //Serial1.write(payload); //SEND IT!
@@ -145,7 +141,12 @@ void loop() {
     if (report) 
         {
             ARC = radio.getARC(); //get automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
-            if (radio.available(&pipe)) radio.read(&rxBatt,1); // get incoming ACK payload (should be one byte)
+            if (radio.available(&pipe)) {  // get incoming ACK payload (should be one byte)
+              radio.read(&telemetryRXByte,1);
+               //Serial.print("ACK (rxBatt): ");
+               //Serial.println(rx);
+              lastTelemetryRXtime = millis();
+            }
             else Serial.println(F(" Recieved: an empty ACK packet?!")); // empty ACK packet received   
             lastTXtime=millis();
             lastPayload=payload;
@@ -155,7 +156,7 @@ void loop() {
   if(millis()-lastRedraw > FRAMERATE)
   {
       txBatt = readBatt();
-      redraw();
+      redraw(telemetryRXByte,txBatt,ARC);
       lastRedraw=millis();   
   }
 }
@@ -175,7 +176,7 @@ uint8_t readBatt(){
   for (int i=0; i<N_MEASUREMENTS; i++) ADCSum+=analogRead(ADCpin); 
   unsigned int ADCavg = ADCSum/N_MEASUREMENTS;
   float vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
-          //Vbatt minimum = 7.0, VbattMaximum = 8.4
+          //Vbatt minimum = 3.0, VbattMaximum = 4.2
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
 
@@ -236,40 +237,69 @@ return 0;
 RX |||||||||||||||      75%
 TX |||||||||||          55%
 */
-void redraw()
+void redraw(uint8_t rxBatt, uint8_t txBatt, uint8_t ARC)
 {
   static uint8_t lastRxPercent;
   static uint8_t lastTxPercent;
+  static uint8_t lastARC;
   
-  if(rxBatt != lastRxPercent || txBatt != lastTxPercent){
-    u8g2.clearBuffer();					// clear the internal memory
-/*
-    u8g2.setCursor(0,13);
-    u8g2.print("RX:");
-    u8g2.setCursor(0,30);
-    u8g2.print("TX:");  
-*/
-    u8g2.drawXBMP( 0, 0, car_width, car_height, car_bits);
-    u8g2.drawXBMP( 0, car_height+3, controller_width, controller_height, controller_bits);
+  /*
+  Serial.print(millis());
+  Serial.print(',');
 
-    
+  Serial.print(lastTelemetryRXtime);
+  Serial.print(',');
+  Serial.print(millis()-lastTelemetryRXtime);
+  Serial.print(',');
+  Serial.print(rxBatt);
+  Serial.print(',');
+  Serial.print(txBatt);
+  Serial.print(',');
+  */
+  
+  Serial.println(ARC);
+  if(rxBatt != lastRxPercent || txBatt != lastTxPercent || ARC != lastARC){
+
+        u8g2.setDrawColor(0);
+        u8g2.drawBox(24,1,100,12); //clear RX percentage bar
+        u8g2.drawBox(24,19,33,12); //clear TX percentage bar
+        u8g2.drawBox(88,19,40,12); //clear ARC bar
+        
+    //Boxes:
     u8g2.setDrawColor(1);
-    if(rxBatt<110) u8g2.drawBox(28,0,rxBatt,15);
-    u8g2.drawBox(28,17,txBatt,15);
+    if(rxBatt<101) u8g2.drawBox(24,1,rxBatt,12); //RX
+    u8g2.drawBox(24,19,txBatt/3,12);             //TX
+    u8g2.drawBox(88,19,map(ARC,15,0,0,40),12);   //ARC
+    
+    //Text:
     u8g2.setDrawColor(2);
-    u8g2.setCursor(60,13);
-    if(rxBatt>110) u8g2.print("?");
-    else {
-      u8g2.print(rxBatt);
-      u8g2.print("%");
-    }
-    u8g2.setCursor(60,30);
-    u8g2.print(txBatt);
-    u8g2.print("%");
+
+        //RX
+        u8g2.setCursor(60,12);
+        if(rxBatt>100) u8g2.print("?");
+        else {
+          u8g2.print((int)rxBatt);
+          u8g2.print("%");
+        }
+        //TX
+        u8g2.setCursor(30,30);
+        u8g2.print(txBatt);
+        u8g2.print("%");
+
+        //ARC
+     // if(ARC>10){
+        u8g2.setCursor(104,30);
+        u8g2.print(ARC);
+     // }
+
+
     lastRxPercent = rxBatt;
     lastTxPercent = txBatt;
+    lastARC = ARC;
     u8g2.sendBuffer();         // transfer internal memory to the display
   }
+ // Serial.println(millis());
+
 }
 
 void nrf24Setup()
