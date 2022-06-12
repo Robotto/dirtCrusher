@@ -53,12 +53,12 @@ const int slowerPaddlePin = 9; //pink
 #define TXPERIOD 20UL
 #define FRAMERATE 1000UL
 
-unsigned long lastTelemetryRXtime = 0;
+unsigned long nextTelemetryTimeout = telemetryTimeout;
 unsigned long lastTXtime = 0;
 unsigned long lastRedraw = 0;
 //uint8_t payload[2];
 uint8_t lastPayload;
-uint8_t ARC; //automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
+uint8_t ARC=16; //automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
 
 
 
@@ -104,7 +104,7 @@ void setup() {
   u8g2.drawXBMP( 0, car_height+3, controller_width, controller_height, controller_bits);
   u8g2.drawXBMP( 64, car_height+3, antenna_width, antenna_height, antenna_bits);
     
-  redraw(255,readBatt(),0);
+  redraw(255,readBatt(),ARC);
   //u8g2.sendBuffer();         // transfer internal memory to the display
 
 
@@ -122,7 +122,7 @@ void setup() {
 }
 
 void loop() {
-  uint8_t telemetryRXByte;
+  uint8_t rxBatt;
   uint8_t txBatt;
   uint8_t pipe;
 
@@ -133,7 +133,9 @@ void loop() {
   uint8_t payload[2];
   payload[0] = speed << 6 | steeringVal << 3 | throttleVal; ///JOIN THE VALUES into one byte
   payload[1] = ARC;
-  //if(millis() - lastTelemetryRXtime > telemetryTimeout) {telemetryRXByte = 255; Serial.println("boop");}
+
+
+
  
   if(millis()-lastTXtime > TXPERIOD || payload[0] != lastPayload) 
   { 
@@ -142,22 +144,23 @@ void loop() {
     if (report) 
         {
             ARC = radio.getARC(); //get automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
-            if (radio.available(&pipe)) {  // get incoming ACK payload (should be one byte)
-              radio.read(&telemetryRXByte,1);
-               //Serial.print("ACK (rxBatt): ");
-               //Serial.println(rx);
-              lastTelemetryRXtime = millis();
-            }
+            // get incoming ACK payload (should be one byte)
+            if (radio.available(&pipe)) radio.read(&rxBatt,1);
             else Serial.println(F(" Recieved: an empty ACK packet?!")); // empty ACK packet received   
             lastTXtime = millis();
             lastPayload = payload[0];
+        }
+    else //NO CONNECTION:
+        {
+          ARC = 16;
+          rxBatt = 255; 
         }
   }
 
   if(millis()-lastRedraw > FRAMERATE)
   {
       txBatt = readBatt();
-      redraw(telemetryRXByte,txBatt,ARC);
+      redraw(rxBatt,txBatt,ARC);
       lastRedraw=millis();   
   }
 }
@@ -238,7 +241,7 @@ return 0;
 RX |||||||||||||||      75%
 TX |||||||||||          55%
 */
-void redraw(uint8_t rxBatt, uint8_t txBatt, uint8_t _ARC)
+void redraw(uint8_t _rxBatt, uint8_t _txBatt, uint8_t _ARC)
 {
   static uint8_t lastRxPercent;
   static uint8_t lastTxPercent;
@@ -258,8 +261,8 @@ void redraw(uint8_t rxBatt, uint8_t txBatt, uint8_t _ARC)
   Serial.print(',');
   */
   
-  Serial.println(_ARC);
-  if(rxBatt != lastRxPercent || txBatt != lastTxPercent || _ARC != lastARC){
+  //Serial.println(_ARC);
+  if(_rxBatt != lastRxPercent || _txBatt != lastTxPercent || _ARC != lastARC){
 
         u8g2.setDrawColor(0);
         u8g2.drawBox(24,1,100,12); //clear RX percentage bar
@@ -268,34 +271,33 @@ void redraw(uint8_t rxBatt, uint8_t txBatt, uint8_t _ARC)
         
     //Boxes:
     u8g2.setDrawColor(1);
-    if(rxBatt<101) u8g2.drawBox(24,1,rxBatt,12); //RX
-    u8g2.drawBox(24,19,txBatt/3,12);             //TX
-    u8g2.drawBox(88,19,map(_ARC,15,0,0,40),12);   //ARC
+    if(_rxBatt<101) u8g2.drawBox(24,1,_rxBatt,12); //RX
+    u8g2.drawBox(24,19,_txBatt/3,12);             //TX
+    if(_ARC<16) u8g2.drawBox(88,19,map(_ARC,15,0,0,40),12);   //ARC
     
     //Text:
     u8g2.setDrawColor(2);
 
         //RX
         u8g2.setCursor(60,12);
-        if(rxBatt>100) u8g2.print("?");
+        if(_rxBatt>100) u8g2.print("?");
         else {
-          u8g2.print((int)rxBatt);
+          u8g2.print(_rxBatt);
           u8g2.print("%");
         }
         //TX
         u8g2.setCursor(30,30);
-        u8g2.print(txBatt);
+        u8g2.print(_txBatt);
         u8g2.print("%");
 
         //ARC
-     // if(ARC>10){
         u8g2.setCursor(104,30);
-        u8g2.print(_ARC);
-     // }
+      if(_ARC<16) u8g2.print(_ARC);
+      else u8g2.print("?");
 
 
-    lastRxPercent = rxBatt;
-    lastTxPercent = txBatt;
+    lastRxPercent = _rxBatt;
+    lastTxPercent = _txBatt;
     lastARC = _ARC;
     u8g2.sendBuffer();         // transfer internal memory to the display
   }
