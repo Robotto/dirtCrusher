@@ -49,14 +49,11 @@ const int steering_bPin = 4; //white
 const int fasterPaddlePin = 6; //blue
 const int slowerPaddlePin = 9; //pink 
 
-#define telemetryTimeout 2500UL
 #define TXPERIOD 20UL
 #define FRAMERATE 1000UL
 
-unsigned long nextTelemetryTimeout = telemetryTimeout;
 unsigned long lastTXtime = 0;
 unsigned long lastRedraw = 0;
-//uint8_t payload[2];
 uint8_t lastPayload;
 uint8_t ARC=16; //automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
 
