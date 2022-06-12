@@ -56,7 +56,10 @@ const int slowerPaddlePin = 9; //pink
 unsigned long lastTelemetryRXtime = 0;
 unsigned long lastTXtime = 0;
 unsigned long lastRedraw = 0;
+//uint8_t payload[2];
 uint8_t lastPayload;
+uint8_t ARC; //automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
+
 
 
 // stick states: 3 is center (neutral)
@@ -118,26 +121,24 @@ void setup() {
   pinMode(slowerPaddlePin,INPUT_PULLUP);  
 }
 
-//TODO: USE ARC TO ESTIMATE LINK QUALITY
-
 void loop() {
   uint8_t telemetryRXByte;
   uint8_t txBatt;
   uint8_t pipe;
-  uint8_t ARC; //automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
 
   checkPaddles();
   uint8_t throttleVal = 3 + readStick(xPin, yPin, throttle_aPin, throttle_bPin); //-3 to 3 -> 0 to 6
   uint8_t steeringVal = 3 + readStick(xPin, yPin, steering_aPin, steering_bPin);
 
-  uint8_t payload = speed << 6 | steeringVal << 3 | throttleVal; ///JOIN THE VALUES into one byte
-
+  uint8_t payload[2];
+  payload[0] = speed << 6 | steeringVal << 3 | throttleVal; ///JOIN THE VALUES into one byte
+  payload[1] = ARC;
   //if(millis() - lastTelemetryRXtime > telemetryTimeout) {telemetryRXByte = 255; Serial.println("boop");}
  
-  if(millis()-lastTXtime > TXPERIOD || payload != lastPayload) 
+  if(millis()-lastTXtime > TXPERIOD || payload[0] != lastPayload) 
   { 
     //Serial1.write(payload); //SEND IT!
-    bool report = radio.write(&payload, 1);    // transmit & save the report
+    bool report = radio.write(&payload, 2);    // transmit & save the report
     if (report) 
         {
             ARC = radio.getARC(); //get automatic retransmission count.. to be used as a rough RSSI/link quality estimate.
@@ -148,8 +149,8 @@ void loop() {
               lastTelemetryRXtime = millis();
             }
             else Serial.println(F(" Recieved: an empty ACK packet?!")); // empty ACK packet received   
-            lastTXtime=millis();
-            lastPayload=payload;
+            lastTXtime = millis();
+            lastPayload = payload[0];
         }
   }
 
@@ -237,7 +238,7 @@ return 0;
 RX |||||||||||||||      75%
 TX |||||||||||          55%
 */
-void redraw(uint8_t rxBatt, uint8_t txBatt, uint8_t ARC)
+void redraw(uint8_t rxBatt, uint8_t txBatt, uint8_t _ARC)
 {
   static uint8_t lastRxPercent;
   static uint8_t lastTxPercent;
@@ -257,8 +258,8 @@ void redraw(uint8_t rxBatt, uint8_t txBatt, uint8_t ARC)
   Serial.print(',');
   */
   
-  Serial.println(ARC);
-  if(rxBatt != lastRxPercent || txBatt != lastTxPercent || ARC != lastARC){
+  Serial.println(_ARC);
+  if(rxBatt != lastRxPercent || txBatt != lastTxPercent || _ARC != lastARC){
 
         u8g2.setDrawColor(0);
         u8g2.drawBox(24,1,100,12); //clear RX percentage bar
@@ -269,7 +270,7 @@ void redraw(uint8_t rxBatt, uint8_t txBatt, uint8_t ARC)
     u8g2.setDrawColor(1);
     if(rxBatt<101) u8g2.drawBox(24,1,rxBatt,12); //RX
     u8g2.drawBox(24,19,txBatt/3,12);             //TX
-    u8g2.drawBox(88,19,map(ARC,15,0,0,40),12);   //ARC
+    u8g2.drawBox(88,19,map(_ARC,15,0,0,40),12);   //ARC
     
     //Text:
     u8g2.setDrawColor(2);
@@ -289,13 +290,13 @@ void redraw(uint8_t rxBatt, uint8_t txBatt, uint8_t ARC)
         //ARC
      // if(ARC>10){
         u8g2.setCursor(104,30);
-        u8g2.print(ARC);
+        u8g2.print(_ARC);
      // }
 
 
     lastRxPercent = rxBatt;
     lastTxPercent = txBatt;
-    lastARC = ARC;
+    lastARC = _ARC;
     u8g2.sendBuffer();         // transfer internal memory to the display
   }
  // Serial.println(millis());

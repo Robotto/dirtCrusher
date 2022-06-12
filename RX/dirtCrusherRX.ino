@@ -2,8 +2,10 @@
 #include <SPI.h>
 #include "RF24.h"
 
-const unsigned int NRF_CE_PIN = 10;
+const unsigned int NRF_CE_PIN = A2;
 const unsigned int NRF_CSN_PIN = A1;
+const unsigned int ARCpin = 10;
+
 
 RF24 radio(NRF_CE_PIN, NRF_CSN_PIN); 
 uint8_t address[][3] = {"TX", "RX"};
@@ -19,6 +21,7 @@ const int steeringFeedbackPinB = 5;
 const int steeringFeedbackPinC = 6;
 int previousState = 0; //holds steering feedback position from last read.
 uint8_t batt=255;
+uint8_t ARC=15;
 
 DRV8871 steeringDriver(7,8);
 
@@ -28,12 +31,14 @@ const unsigned int STOP_PWM_VAL = 127;
 
 void setup() {
   //Serial1.begin(9600);
-  //Serial.begin(115200);
+  Serial.begin(115200);
 
   pinMode(steeringFeedbackPinA,INPUT_PULLUP);
   pinMode(steeringFeedbackPinB,INPUT_PULLUP);
   pinMode(steeringFeedbackPinC,INPUT_PULLUP);
   pinMode(motorPin,OUTPUT);
+  pinMode(ARCpin,OUTPUT);
+
 
   /* PRESCALE DIVIDER FOR PWM FRQ ON PINS 9 and 10:
   16'000'000 / 256 / 2 = 31250Hz 
@@ -43,7 +48,8 @@ void setup() {
             0x04 256 122.0703125
             0x05 1024 30.517578125
 */
-  TCCR1B = TCCR1B & 0b11111000 | 0x04;
+  TCCR1B = TCCR1B & 0b11111000 | 0x04; // <- Works.
+//  TCCR1B = TCCR1B & 0b11111000 | 0x05;
 
   if (!radio.begin()) {
         //Serial.println(F("radio hardware is not responding!!"));
@@ -74,7 +80,7 @@ void setup() {
 
 uint8_t ackPayload=0;
 uint8_t pipe;
-uint8_t rx;
+uint8_t rx[2]; // [0]=RC command, [1]=ARC of last ACK'ed packet.
 unsigned long nextFailsafeTimeout = 0;
 int failsafeTimeout = 500; //ms
 
@@ -86,24 +92,30 @@ void loop(){
   }*/
   if (radio.available(&pipe)) {                    // is there a payload? get the pipe number that recieved it TODO: Is pipe number overhovedet used?!
       //uint8_t bytes = radio.getDynamicPayloadSize(); // get the size of the payload
-      radio.read(&rx, 1);       // get incoming payload
+      radio.read(&rx, 2);       // get incoming payload
       //ackPayload++;
       radio.writeAckPayload(1, &batt, 1);
       //Serial.print("RX!: "); Serial.println(rx,BIN);
       nextFailsafeTimeout = millis() + failsafeTimeout;
     }
-  if(millis() > nextFailsafeTimeout) rx = failsafeVal;
+  if(millis() > nextFailsafeTimeout) rx[0] = failsafeVal;
   
   //Parse received data:
-  int throttle = -3+(rx&0b00000111);
-  int steering = (-3+((rx&0b00111000)>>3))*(-1); //-1 reverses steering direction.
-  uint8_t speedFactor = (rx&0b11000000)>>6;
+  int throttle = -3+(rx[0]&0b00000111);
+  int steering = (-3+((rx[0]&0b00111000)>>3))*(-1); //-1 reverses steering direction.
+  uint8_t speedFactor = (rx[0]&0b11000000)>>6;
+  ARC=rx[1];
+  Serial.print("ARC: "); Serial.println(ARC);
 
                       //    1-3                -3-3
   int throttlePWMdiff = speedFactor * 14 * throttle; // 127/(3*3) = 14.11
   uint8_t pwmVal = STOP_PWM_VAL + throttlePWMdiff;
-  int mapVal = map(pwmVal,0,255,31,62);
+  int mapVal = map(pwmVal,0,255,32,62);
   analogWrite(motorPin, mapVal);
+
+  //Report ARC over PWM to OSD :D
+  int ARCPWM = map(ARC,0,15,68,29); //TEST THESE
+  analogWrite(ARCpin,ARCPWM);
 
   previousState = readSteeringFeedback();
   int steeringDelta = steering-previousState; 
