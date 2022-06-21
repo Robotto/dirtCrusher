@@ -15,6 +15,8 @@ U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 //CAR ICON:
 #define car_width 20
 #define car_height 15
+#define car_x 0
+#define car_y 0
 static const unsigned char car_bits[] U8X8_PROGMEM = {
    0x3c, 0xcf, 0x03, 0xe0, 0x7f, 0x00, 0xf0, 0xff, 0x00, 0x38, 0xc0, 0x00,
    0x18, 0xc0, 0x01, 0x1f, 0x80, 0x0f, 0xfe, 0xff, 0x07, 0xfe, 0xff, 0x07,
@@ -24,6 +26,8 @@ static const unsigned char car_bits[] U8X8_PROGMEM = {
 //CONTROLLER ICON:
 #define controller_width 20
 #define controller_height 14
+#define controller_x 0
+#define controller_y car_height+3
 static const unsigned char controller_bits[] U8X8_PROGMEM = {
    0x00, 0x02, 0x00, 0x00, 0x02, 0x00, 0x00, 0x02, 0x00, 0xf0, 0xff, 0x00,
    0x0c, 0x00, 0x03, 0x02, 0x00, 0x04, 0x01, 0x00, 0x08, 0x11, 0x40, 0x08,
@@ -32,6 +36,8 @@ static const unsigned char controller_bits[] U8X8_PROGMEM = {
 
 #define antenna_width 20
 #define antenna_height 15
+#define antenna_x 64
+#define antenna_y car_height+3
 static const unsigned char antenna_bits[] U8X8_PROGMEM = {
   0x08, 0x00, 0x01, 0x0C, 0x00, 0x03, 0x26, 0x40, 0x06, 0x36, 0xC0, 0x06, 
   0x33, 0xC6, 0x0C, 0x13, 0x8F, 0x0C, 0x93, 0x9F, 0x0C, 0x13, 0x8F, 0x0C, 
@@ -97,9 +103,9 @@ void setup() {
   nrf24Setup();
   
   u8g2.clearBuffer();					// clear the internal memory
-  u8g2.drawXBMP( 0, 0, car_width, car_height, car_bits);
-  u8g2.drawXBMP( 0, car_height+3, controller_width, controller_height, controller_bits);
-  u8g2.drawXBMP( 64, car_height+3, antenna_width, antenna_height, antenna_bits);
+  u8g2.drawXBMP( car_x, car_y, car_width, car_height, car_bits);
+  u8g2.drawXBMP( controller_x, controller_y, controller_width, controller_height, controller_bits);
+  u8g2.drawXBMP( antenna_x, antenna_y, antenna_width, antenna_height, antenna_bits);
     
   redraw(255,readBatt(),ARC);
   //u8g2.sendBuffer();         // transfer internal memory to the display
@@ -121,7 +127,7 @@ void setup() {
 void loop() {
   uint8_t rxBatt;
   uint8_t txBatt;
-  uint8_t pipe;
+  uint8_t pipe; //Not really used, but might be relevant in the future?
 
   checkPaddles();
   uint8_t throttleVal = 3 + readStick(xPin, yPin, throttle_aPin, throttle_bPin); //-3 to 3 -> 0 to 6
@@ -161,14 +167,14 @@ void loop() {
       lastRedraw=millis();   
   }
 }
-//Voltage divider: VBATT -> 51K <-ADC-> 75K -> GND
+//Voltage divider: None.
 #define V_BATTMAX 4.2
 #define V_BATTMIN 3.0
 #define V_ADCMAX 5.0
 #define ADCMAX 1023.0
 #define V_DIVIDER_MAX_OUT 4.2
 #define DIVIDER_FACTOR 1.0
-#define V_CALIBATED_OFFSET 0.0
+#define V_CALIBATED_OFFSET 0.09
 #define N_MEASUREMENTS 16
 
 uint8_t readBatt(){
@@ -178,12 +184,13 @@ uint8_t readBatt(){
   unsigned int ADCavg = ADCSum/N_MEASUREMENTS;
   float vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
           //Vbatt minimum = 3.0, VbattMaximum = 4.2
+  //Serial.println(vBatt);
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
 
 
 //WORST CASE RUNTIME: >20mS
-int checkPaddles()
+void checkPaddles()
 {
   static bool lastState_fasterPaddle = HIGH;
   static bool lastState_slowerPaddle = HIGH;
@@ -262,14 +269,14 @@ void redraw(uint8_t _rxBatt, uint8_t _txBatt, uint8_t _ARC)
   if(_rxBatt != lastRxPercent || _txBatt != lastTxPercent || _ARC != lastARC){
 
         u8g2.setDrawColor(0);
-        u8g2.drawBox(24,1,100,12); //clear RX percentage bar
-        u8g2.drawBox(24,19,33,12); //clear TX percentage bar
+        u8g2.drawBox(car_width+4,1,100,12); //clear RX percentage bar
+        u8g2.drawBox(controller_width+4,19,antenna_x-(controller_width+4),12); //clear TX percentage bar
         u8g2.drawBox(88,19,40,12); //clear ARC bar
         
     //Boxes:
     u8g2.setDrawColor(1);
     if(_rxBatt<101) u8g2.drawBox(24,1,_rxBatt,12); //RX
-    u8g2.drawBox(24,19,_txBatt/3,12);             //TX
+    u8g2.drawBox(controller_width+4,19,_txBatt/3,12);             //TX
     if(_ARC<16) u8g2.drawBox(88,19,map(_ARC,15,0,0,40),12);   //ARC
     
     //Text:
