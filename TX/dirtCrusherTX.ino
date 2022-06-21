@@ -175,7 +175,7 @@ void loop() {
 #define V_DIVIDER_MAX_OUT 4.2
 #define DIVIDER_FACTOR 1.0
 #define V_CALIBATED_OFFSET 0.09
-#define N_MEASUREMENTS 16
+#define N_MEASUREMENTS 64
 
 uint8_t readBatt(){
   //Do a bunch of ADC measurements and convert them to average Vbatt, append Vbatt to report
