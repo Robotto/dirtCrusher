@@ -313,6 +313,8 @@ void nrf24Setup()
 {
     radio.setDataRate(RF24_250KBPS);
     radio.setPALevel(RF24_PA_MAX);     // RF24_PA_MAX is default.
+    radio.setChannel(83); //2400MHz+n -> 2400+83 = 2483MHz (at the very edge of legal wifi in .dk) 
+
     radio.setRetries(5,15); //delay: The default value of 5 means 1500us (5 * 250 + 250), count:  The default/maximum is 15. Use 0 to disable the auto-retry feature all together.
     // to use ACK payloads, we need to enable dynamic payload lengths (for all nodes)
     radio.enableDynamicPayloads();    // ACK payloads are dynamically sized
