@@ -56,7 +56,7 @@ const int fasterPaddlePin = 6; //blue
 const int slowerPaddlePin = 9; //pink 
 
 #define TXPERIOD 20UL
-#define FRAMERATE 1000UL
+#define FRAMERATE 250UL
 
 unsigned long lastTXtime = 0;
 unsigned long lastRedraw = 0;
@@ -249,12 +249,24 @@ void redraw(uint8_t _rxBatt, uint8_t _txBatt, uint8_t _ARC)
 {
   static uint8_t lastRxPercent;
   static uint8_t lastTxPercent;
+  static uint8_t highestARC;
   static uint8_t lastARC;
-  
+
+  //unsigned long in = millis();  
   /*
   Serial.print(millis());
   Serial.print(',');
+  */
+  //Trying to make a non-zero ARC stick to the screen for longer:
+  //shouldn't really do calculations in here, but the framerate is 1Hz, so it feels right...
+  if(_ARC<16){ //16 is the error state when there's no connection...
+  if(_ARC>highestARC) highestARC=_ARC;
+  else if(highestARC>0) highestARC--; //should reach 0 after a few seconds.
 
+  _ARC = highestARC; //sort of an injection of a new funtionality into old code.. sorry.
+  }
+
+/*
   Serial.print(lastTelemetryRXtime);
   Serial.print(',');
   Serial.print(millis()-lastTelemetryRXtime);
@@ -264,6 +276,7 @@ void redraw(uint8_t _rxBatt, uint8_t _txBatt, uint8_t _ARC)
   Serial.print(txBatt);
   Serial.print(',');
   */
+  
   
   //Serial.println(_ARC);
   if(_rxBatt != lastRxPercent || _txBatt != lastTxPercent || _ARC != lastARC){
@@ -295,8 +308,12 @@ void redraw(uint8_t _rxBatt, uint8_t _txBatt, uint8_t _ARC)
         u8g2.print("%");
 
         //ARC
-        u8g2.setCursor(104,30);
-      if(_ARC<16) u8g2.print(_ARC);
+        //u8g2.setCursor(104,30);
+        u8g2.setCursor(98,30);
+      if(_ARC<16) {
+        u8g2.print('-');
+        u8g2.print(_ARC);
+      }
       else u8g2.print("?");
 
 
@@ -305,7 +322,7 @@ void redraw(uint8_t _rxBatt, uint8_t _txBatt, uint8_t _ARC)
     lastARC = _ARC;
     u8g2.sendBuffer();         // transfer internal memory to the display
   }
- // Serial.println(millis());
+  //Serial.println(millis()-in);
 
 }
 
