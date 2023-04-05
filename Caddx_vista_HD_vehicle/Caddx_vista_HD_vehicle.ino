@@ -1,3 +1,21 @@
+#include "drv8871.h"
+
+// PWM  input pins, any of the following pins can be used: digital 0 - 13 or analog A0 -  A5 
+
+//On the pro micro pin2 is attached to interrupt channel 1
+const int pwmPIN[]={2}; // an array to identify the PWM input  pins (the array can be any length) 
+                                  // first  pin is channel 1, second is channel 2...etc
+
+int RC_inputs = 0;                //  The number of pins in pwmPIN that are connected to an RC receiver. Addition pins  not connected to an RC receiver could be used for any other purpose i.e. detecting  the echo pulse on an HC-SR04 ultrasonic distance sensor
+                                  //  When 0, it will automatically update to the number of pins specified in pwmPIN[]  after calling setup_pwmRead().                                                
+//  Calibration of each RC channel:
+
+const int steeringFeedbackPinA = 4;
+const int steeringFeedbackPinB = 5;
+const int steeringFeedbackPinC = 6;
+int previousState = 0; //holds steering feedback position from last read.
+DRV8871 steeringDriver(7,8);
+
 /*  Kelvin Nelson 24/07/2019
  *  
  *  Pulse Width Modulation (PWM)  decoding of RC Receiver with failsafe
@@ -90,17 +108,23 @@
 //    Step 4: Choose a failsafe position for each channel, in the range -1.0 to +1.0,  and enter it into the array RC_failsafe[] = {}
 //            Note: if you would  like the arduino to respond to the loss of transmitter signal you may need to disable  the failsafe feature on your receiver (if it has one).
 //            an example  sketch to check the operation of the failsafe, and for printing the calibrated channels  to serial:
-/* 
+ 
               unsigned long now;                        //  timing variables to update data at a regular interval                  
               unsigned  long rc_update;
-              const int channels = 6;                   // specify  the number of receiver channels
+              const int channels = 1;                   // specify  the number of receiver channels
               float RC_in[channels];                    //  an array to store the calibrated input from receiver 
               
               void  setup()  {
-                  setup_pwmRead();                      
-                  Serial.begin(9600);
+                  setup_pwmRead();
+                    pinMode(steeringFeedbackPinA,INPUT_PULLUP);
+                    pinMode(steeringFeedbackPinB,INPUT_PULLUP);
+                    pinMode(steeringFeedbackPinC,INPUT_PULLUP);
+                      
+                  Serial.begin(115200);
               }
               
+              int steering=0;
+
               void loop()  {
                   now  = millis();
                   
@@ -108,19 +132,55 @@
                     
                     rc_update  = now;                           
                     
-                    //print_RCpwm();                        // uncommment to print raw data from receiver to serial
+                      print_RCpwm();                        // uncommment to print raw data from receiver to serial
                     
-                    for (int i = 0; i<channels; i++){       //  run through each RC channel
-                      int CH = i+1;
+                      int CH = 1;
                       
-                      RC_in[i] = RC_decode(CH);             // decode receiver channel  and apply failsafe
+                      steering = RC_decode(CH)*3;             // decode receiver channel  and apply failsafe
                       
-                      print_decimal2percentage(RC_in[i]);   // uncomment to print calibrated receiver input (+-100%) to serial       
-                    }
+                      print_decimal2percentage(steering);   }
                     Serial.println();                       //  uncomment when printing calibrated receiver input to serial.
-                  }
+                
+                  previousState = readSteeringFeedback();
+                  int steeringDelta = steering-previousState; 
+                  if(steeringDelta<0) steeringDriver.forward();//need to go left
+                  else if(steeringDelta>0) steeringDriver.reverse();//need to go right
+                  else steeringDriver.brake(); //need to go nowhere
+                  
               }
-               */
+               
+int readSteeringFeedback(){ //negative is turning left!
+  int aState = digitalRead(steeringFeedbackPinA);
+  int bState = digitalRead(steeringFeedbackPinB);
+  int cState = digitalRead(steeringFeedbackPinC);
+/*
+  uint8_t state = aState + bState<<1 + cState <<2;
+
+  switch (state) {
+    case 7:
+      return previousState;
+    case 0:
+      return -3;
+    case 1:
+      return -2;
+    case 5:
+      return -1;
+    case 4:
+      return 0;
+    case 6:
+      return 1;
+    case 2:
+      return 2;
+    case 3:
+      return 3;
+  }
+*/
+  if( aState & bState & cState ) return previousState; //non-discrete in-between-state with all pins high - Keep moving the steering.
+  //Now we know the feedback is in a discrete state:
+  if( bState ) return 2-cState+aState; //Steering feedback is positive (1,2,3)
+  else if ( cState & !aState ) return 0; // A=0, B=0; C=1
+  else return -3+aState+cState; //-3,-2,-1
+}
 
 // EXAMPLE USE OF GENERIC PWM FUNCTIONS:
   /*
@@ -146,14 +206,6 @@
   *  USER DEFINED VARIABLES (MODIFY TO SUIT YOUR APPLICATION)
  */
  
-// PWM  input pins, any of the following pins can be used: digital 0 - 13 or analog A0 -  A5 
-
-const int pwmPIN[]={2,3,4,5,6,7}; // an array to identify the PWM input  pins (the array can be any length) 
-                                  // first  pin is channel 1, second is channel 2...etc
-
-int RC_inputs = 0;                //  The number of pins in pwmPIN that are connected to an RC receiver. Addition pins  not connected to an RC receiver could be used for any other purpose i.e. detecting  the echo pulse on an HC-SR04 ultrasonic distance sensor
-                                  //  When 0, it will automatically update to the number of pins specified in pwmPIN[]  after calling setup_pwmRead().                                                
-//  Calibration of each RC channel:
  
 // The arrays below are used to calibrate  each RC channel into the range -1 to +1 so that servo direction, mixing, rates,  sub trims...etc can be applied in sketch depending on application. 
 // The arrays  should be modified in order to calibrate the min, middle and max pulse durations  to suit your transmitter (use max rates to get the best resolution). 
@@ -162,13 +214,13 @@ int RC_inputs = 0;                //  The number of pins in pwmPIN that are conn
 
 //SANWA  6CH 40MHz with corona RP6D1  
 //                THR     RUD     PIT     BAL     SWITCH  SLIDER
-int RC_min[6] = { 988,    1060,   976,    960,    1056,   1116};
-int  RC_mid[6] = { 1472,   1446,   1424,   1398,   1374,   1460};
-int RC_max[6] =  { 1800,   1816,   1796,   1764,   1876,   1796};
+int RC_min[1] = { 1000 };
+int  RC_mid[1] = { 1500 };
+int RC_max[1] =  { 2000 };
 
 // fail safe positions
 
-float  RC_failsafe[] = {0.00, 0.00, 1, 0.00, -0.25, 0.00};
+float  RC_failsafe[] = {0.00};
    
 // enter a failsafe  position (in the range of -+1) for each RC channel in case radio signal is lost
 //  if the array is the incorrect length for the number of RC channels, the failsafe  will default to neutral i.e. 0. 
