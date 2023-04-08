@@ -1,33 +1,93 @@
 #include "drv8871.h"
+#include <SPI.h>
+#include <LoRa.h>
 
+//Pins:
 const int steeringFeedbackPinA = 4;
 const int steeringFeedbackPinB = 5;
 const int steeringFeedbackPinC = 6;
+const int steeringDriverPin1 = 7;
+const int steeringDriverPin2 = 8;
+const int PWMmotorPin = 9;
+const int PWMrssiPin = 10;
+const int LoRaSSPin = A0;
+const int LoRaResetPin = A1;
+const int LoRaDioPin = A2;
+
+//Constants:
+const int failsafeTimeout = 250; //ms
+const uint8_t failsafeVal = 0b01011011;
+const unsigned int STOP_PWM_VAL = 127;
+
+//Variables:
+uint8_t rx=0;
+int rssi=-150;
+unsigned long nextFailsafeTimeout = 0;
 int previousState = 0; //holds steering feedback position from last read.
-DRV8871 steeringDriver(7,8);
 
-              void  setup()  {
-                    pinMode(steeringFeedbackPinA,INPUT_PULLUP);
-                    pinMode(steeringFeedbackPinB,INPUT_PULLUP);
-                    pinMode(steeringFeedbackPinC,INPUT_PULLUP);
-                      
-                  Serial.begin(115200);
-              }
+
+//Objects:
+DRV8871 steeringDriver(steeringDriverPin1,steeringDriverPin1);
+
+
+void  setup()  {
+  LoRa.setPins(LoRaSSPin, LoRaResetPin, LoRaDioPin);
+  if (!LoRa.begin(433E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+  /* PRESCALE DIVIDER FOR PWM FRQ ON PINS 9 and 10:
+  16'000'000 / 256 / 2 = 31250Hz 
+  0x01 1 31250
+  0x02 8 3906.25
+  0x03 64 488.28125
+  0x04 256 122.0703125
+  0x05 1024 30.517578125
+  */
+  TCCR1B = TCCR1B & 0b11111000 | 0x04; // <- Works.
+  //TCCR1B = TCCR1B & 0b11111000 | 0x05;
+  pinMode(steeringFeedbackPinA,INPUT_PULLUP);
+  pinMode(steeringFeedbackPinB,INPUT_PULLUP);
+  pinMode(steeringFeedbackPinC,INPUT_PULLUP);
+  pinMode(PWMmotorPin,OUTPUT);
+  pinMode(PWMrssiPin,OUTPUT);
+      
+  Serial.begin(115200);
+  }
               
-              int steering=0;
 
-              void loop()  {
-                  now  = millis();
+void loop()  {
+  if(LoRa.parsePacket()){
+      rx = LoRa.read(); 
+      if(LoRa.available()) LoRa.flush(); //flush the RX buffer...                   
+      //Serial.print("RX!: "); Serial.println(rx,BIN);
+      nextFailsafeTimeout = millis() + failsafeTimeout;
+    }
+  if(millis() > nextFailsafeTimeout) rx = failsafeVal;
+  
+  //Report RSSI over PWM to OSD :D
+  analogWrite(PWMrssiPin,map(LoRa.rssi(),-150,20,0,255));
 
-                  int steeringRX = 0; //TODO: UPDATE STEERING DATA FROM RADIO LINK
+  //Parse received data:
+  int throttle = -3+(rx&0b00000111);
+  int steering = (-3+((rx&0b00111000)>>3))*(-1); //-1 reverses steering direction.
+  uint8_t speedFactor = (rx&0b11000000)>>6;
+  
+  //Handle speed:
+                      //    1-3                -3-3
+  int throttlePWMdiff = speedFactor * 14 * throttle; // 127/(3*3) = 14.11
+  uint8_t pwmVal = STOP_PWM_VAL + throttlePWMdiff;
+  int mapVal = map(pwmVal,0,255,32,62);
+  analogWrite(PWMmotorPin, mapVal);
 
-                  previousState = readSteeringFeedback();
-                  int steeringDelta = steering-previousState; 
-                  if(steeringDelta<0) steeringDriver.forward();//need to go left
-                  else if(steeringDelta>0) steeringDriver.reverse();//need to go right
-                  else steeringDriver.brake(); //need to go nowhere
-                  
-              }
+
+  //Handle steering:
+  previousState = readSteeringFeedback();
+  int steeringDelta = steering-previousState; 
+  if(steeringDelta<0) steeringDriver.forward();//need to go left
+  else if(steeringDelta>0) steeringDriver.reverse();//need to go right
+  else steeringDriver.brake(); //need to go nowhere  
+}
                
 int readSteeringFeedback(){ //negative is turning left!
   int aState = digitalRead(steeringFeedbackPinA);
