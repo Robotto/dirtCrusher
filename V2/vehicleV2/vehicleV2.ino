@@ -1,6 +1,6 @@
 #include "drv8871.h"
 #include <SPI.h>
-#include <LoRa.h>
+#include <LoRa.h> //https://github.com/sandeepmistry/arduino-LoRa
 
 //Pins:
 const int steeringFeedbackPinA = 4;
