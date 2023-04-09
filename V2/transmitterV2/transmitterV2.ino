@@ -1,5 +1,5 @@
 #include <SPI.h>
-#include <LoRa.h>
+#include <LoRa.h> //https://github.com/sandeepmistry/arduino-LoRa
 
 const int LoRaSSPin = 2;
 const int LoRaResetPin = 3;
@@ -14,8 +14,7 @@ const int fasterPaddlePin = 6; //blue
 const int slowerPaddlePin = 9; //pink 
 
 
-#define TXPERIOD 20UL //20mS -> 50Hz
-
+#define TXPERIOD 25UL //25mS -> 40Hz
 
 /*
 0bxxxxxxxx
@@ -88,7 +87,7 @@ uint8_t checkPaddles()  {
   static bool lastState_fasterPaddle = HIGH;
   static bool lastState_slowerPaddle = HIGH;
 
-  if(!digitalRead(fasterPaddlePin) || !digitalRead(slowerPaddlePin) ) delay(20); //debounce
+  if(!digitalRead(fasterPaddlePin) || !digitalRead(slowerPaddlePin) ) delay(20);
 
   if(!digitalRead(fasterPaddlePin) && lastState_fasterPaddle) { //paddle is pressed 
     lastState_fasterPaddle = LOW; //set last state to pressed
@@ -114,7 +113,7 @@ int readStick(int X, int Y, int A, int B) {
   int bState;
 
   pinMode(X,OUTPUT);
-  //digitalWrite(X,LOW); //perhaps redundant if state never changes?
+  digitalWrite(X,LOW); //perhaps redundant if state never changes?
   aState = digitalRead(A);
   bState = digitalRead(B);
   pinMode(X,INPUT);
@@ -123,7 +122,7 @@ int readStick(int X, int Y, int A, int B) {
   else if ( !bState ) return 3; //A=high, B=low
 
   pinMode(Y,OUTPUT);
-  //digitalWrite(Y,LOW); //perhaps redundant if state never changes?
+  digitalWrite(Y,LOW); //perhaps redundant if state never changes?
   aState = digitalRead(A);
   bState = digitalRead(B);
   pinMode(Y,INPUT);
