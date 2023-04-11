@@ -70,7 +70,7 @@ void loop() {
    if (LoRa.beginPacket()) //If radio is ready to transmit
         {
             LoRa.print(payload);
-            LoRa.endPacket();
+            LoRa.endPacket(true); //Async: don't wait for TX confirmation
             lastTXtime = millis();
             lastPayload = payload;
         }
@@ -113,20 +113,17 @@ uint8_t checkPaddles()  {
 
 int readStick(int X, int Y, int A, int B) {
 
-  int aState;
-  int bState;
-
   pinMode(X,OUTPUT);
-  digitalWrite(X,LOW); //perhaps redundant if state never changes?
-  aState = digitalRead(A);
-  bState = digitalRead(B);
+  //digitalWrite(X,LOW); //perhaps redundant if state never changes?
+  int aState = digitalRead(A);
+  int bState = digitalRead(B);
   pinMode(X,INPUT);
 
   if( !aState ) return 1+(1-bState); //A=low (state 1 or 2)
   else if ( !bState ) return 3; //A=high, B=low
 
   pinMode(Y,OUTPUT);
-  digitalWrite(Y,LOW); //perhaps redundant if state never changes?
+  //digitalWrite(Y,LOW); //perhaps redundant if state never changes?
   aState = digitalRead(A);
   bState = digitalRead(B);
   pinMode(Y,INPUT);
