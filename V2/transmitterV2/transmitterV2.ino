@@ -1,9 +1,12 @@
 #include <SPI.h>
 #include <LoRa.h> //https://github.com/sandeepmistry/arduino-LoRa
 
-const int LoRaSSPin = 2;
-const int LoRaResetPin = 3;
-const int LoRaDioPin = 4;
+//SX1278 pins:
+const int LoRaSSPin = 10;
+const int LoRaResetPin = A0;
+const int LoRaDioPin = -1; //unused
+
+//Dirtcrusher remote controller pins
 const int xPin = 8; //ORANGE 
 const int yPin = 5; //GREEN
 const int throttle_aPin = A3; //yellow
@@ -17,6 +20,7 @@ const int slowerPaddlePin = 9; //pink
 #define TXPERIOD 25UL //25mS -> 40Hz
 
 /*
+Payload byte layout:
 0bxxxxxxxx
   ||||||||
   ||||||| \_ Throttle STICK BIT #0
