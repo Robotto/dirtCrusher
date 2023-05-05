@@ -2,22 +2,22 @@
 #include <LoRa.h> //https://github.com/sandeepmistry/arduino-LoRa
 
 //SX1278 pins:
-const int LoRaSSPin = 10;
-const int LoRaResetPin = A0;
-const int LoRaDioPin = -1; //unused
+const int LoRaSSPin = A0;
+const int LoRaResetPin = A1;
+const int LoRaDioPin = A2; //unused
 
 //Dirtcrusher remote controller pins
 const int xPin = 8; //ORANGE 
 const int yPin = 5; //GREEN
 const int throttle_aPin = A3; //yellow
-const int throttle_bPin = A2; //WHITE
+const int throttle_bPin = 10; //WHITE
 const int steering_aPin = 7; //yellow
 const int steering_bPin = 4; //white
 const int fasterPaddlePin = 6; //blue
 const int slowerPaddlePin = 9; //pink 
 
 
-#define TXPERIOD 25UL //25mS -> 40Hz
+#define TXPERIOD 25UL //30mS -> 33Hz / 25mS -> 40Hz
 
 /*
 Payload byte layout:
@@ -71,9 +71,11 @@ void loop() {
         {
             LoRa.print(payload);
             LoRa.endPacket(true); //Async: don't wait for TX confirmation
+            //Serial.print("dt:"); Serial.println(millis()-lastTXtime);
             lastTXtime = millis();
             lastPayload = payload;
         }
+    //else Serial.println("Not ready to transmit...");
   }
 }
 

@@ -34,7 +34,7 @@ DRV8871 steeringDriver(steeringDriverPin1,steeringDriverPin1);
 
 void  setup()  {
   Serial.begin(115200);
-  while(!Serial);
+  //while(!Serial);
   LoRa.setPins(LoRaSSPin, LoRaResetPin, LoRaDioPin);
   if (!LoRa.begin(433E6)) {
     Serial.println("Starting LoRa failed!");
@@ -59,18 +59,26 @@ void  setup()  {
   Serial.println("Good to go!");
   }
               
+int rssi=-150;
 
 void loop()  {
   if(LoRa.parsePacket()){
       rx = LoRa.read(); 
+      rssi = LoRa.packetRssi();
       if(LoRa.available()) LoRa.flush(); //flush the RX buffer...                   
-      Serial.print("RX!: "); Serial.println(rx,BIN);
+      //Serial.print("RX!: "); 
+      //Serial.print(rx,BIN); 
+      //Serial.print(", with RSSI: ");
+      //Serial.print(rssi); 
+      //Serial.print(','); 
+      //Serial.print(millis()-(nextFailsafeTimeout-failsafeTimeout)); //milliseconds since last RX
+      //Serial.println();
       nextFailsafeTimeout = millis() + failsafeTimeout;
     }
   if(millis() > nextFailsafeTimeout) rx = failsafeVal;
   
   //Report RSSI over PWM to OSD :D
-  analogWrite(PWMrssiPin,map(LoRa.rssi(),-150,20,0,255));
+  analogWrite(PWMrssiPin,map(rssi,-150,20,0,255));
 
   //Parse received data:
   int throttle = -3+(rx&0b00000111);
