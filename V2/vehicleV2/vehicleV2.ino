@@ -10,9 +10,11 @@ const int steeringDriverPin1 = 7;
 const int steeringDriverPin2 = 8;
 const int PWMmotorPin = 9;
 const int PWMrssiPin = 10;
-const int LoRaSSPin = A0;
-const int LoRaResetPin = A1;
-const int LoRaDioPin = A2;
+
+
+const int LoRaSSPin = A0; //output
+const int LoRaResetPin = A1; //output
+const int LoRaDioPin = A2; //input
 
 //Constants:
 const int failsafeTimeout = 250; //ms
@@ -31,6 +33,8 @@ DRV8871 steeringDriver(steeringDriverPin1,steeringDriverPin1);
 
 
 void  setup()  {
+  Serial.begin(115200);
+  while(!Serial);
   LoRa.setPins(LoRaSSPin, LoRaResetPin, LoRaDioPin);
   if (!LoRa.begin(433E6)) {
     Serial.println("Starting LoRa failed!");
@@ -51,8 +55,8 @@ void  setup()  {
   pinMode(steeringFeedbackPinC,INPUT_PULLUP);
   pinMode(PWMmotorPin,OUTPUT);
   pinMode(PWMrssiPin,OUTPUT);
-      
-  Serial.begin(115200);
+
+  Serial.println("Good to go!");
   }
               
 
@@ -60,7 +64,7 @@ void loop()  {
   if(LoRa.parsePacket()){
       rx = LoRa.read(); 
       if(LoRa.available()) LoRa.flush(); //flush the RX buffer...                   
-      //Serial.print("RX!: "); Serial.println(rx,BIN);
+      Serial.print("RX!: "); Serial.println(rx,BIN);
       nextFailsafeTimeout = millis() + failsafeTimeout;
     }
   if(millis() > nextFailsafeTimeout) rx = failsafeVal;
