@@ -58,12 +58,11 @@ void  setup()  {
 
   Serial.println("Good to go!");
   }
-              
-int rssi=-150;
+            
 
 void loop()  {
   if(LoRa.parsePacket()){
-      rx = LoRa.read(); 
+      rx = (uint8_t)LoRa.read(); 
       rssi = LoRa.packetRssi();
       if(LoRa.available()) LoRa.flush(); //flush the RX buffer...                   
       //Serial.print("RX!: "); 
@@ -75,10 +74,14 @@ void loop()  {
       //Serial.println();
       nextFailsafeTimeout = millis() + failsafeTimeout;
     }
-  if(millis() > nextFailsafeTimeout) rx = failsafeVal;
+  if(millis() > nextFailsafeTimeout) {
+    rx = failsafeVal;
+    rssi = -150;
+  }
   
   //Report RSSI over PWM to OSD :D
-  analogWrite(PWMrssiPin,map(rssi,-150,20,0,255));
+  int rssiPWM = map(rssi,-150,20,0,255);
+  analogWrite(PWMrssiPin,rssiPWM);
 
   //Parse received data:
   int throttle = -3+(rx&0b00000111);
@@ -99,6 +102,21 @@ void loop()  {
   if(steeringDelta<0) steeringDriver.forward();//need to go left
   else if(steeringDelta>0) steeringDriver.reverse();//need to go right
   else steeringDriver.brake(); //need to go nowhere  
+
+/*
+  Serial.print(rx,BIN); 
+  Serial.print(" "); 
+  Serial.print(rssi);
+  Serial.print(" "); 
+  Serial.print(throttle);
+  Serial.print(" "); 
+  Serial.print(mapVal);
+  Serial.print(" ");
+  Serial.print(speedFactor);
+  Serial.print(" ");
+  Serial.print(steering);
+  Serial.println();
+*/
 }
                
 int readSteeringFeedback(){ //negative is turning left!

@@ -13,8 +13,8 @@ const int throttle_aPin = A3; //yellow
 const int throttle_bPin = 10; //WHITE
 const int steering_aPin = 7; //yellow
 const int steering_bPin = 4; //white
-const int fasterPaddlePin = 6; //blue
-const int slowerPaddlePin = 9; //pink 
+const int fasterPaddlePin = 9; //pink 
+const int slowerPaddlePin = 6; //blue
 
 
 #define TXPERIOD 25UL //30mS -> 33Hz / 25mS -> 40Hz
@@ -69,9 +69,15 @@ void loop() {
   { 
    if (LoRa.beginPacket()) //If radio is ready to transmit
         {
-            LoRa.print(payload);
+            LoRa.write(payload);
             LoRa.endPacket(true); //Async: don't wait for TX confirmation
             //Serial.print("dt:"); Serial.println(millis()-lastTXtime);
+            /*
+            Serial.print("speed:"); Serial.print(speed); Serial.print(",");
+            Serial.print("Throttle:"); Serial.print(throttleVal); Serial.print(",");
+            Serial.print("Steering:"); Serial.print(steeringVal); Serial.print(",");
+            Serial.print("Binary:"); Serial.print(payload,BIN); Serial.println();
+            */
             lastTXtime = millis();
             lastPayload = payload;
         }
