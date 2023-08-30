@@ -1,5 +1,5 @@
 #include "drv8871.h"
-#include <SPI.h>
+#include <SPI.h>∏
 #include "RF24.h"
 
 const unsigned int NRF_CE_PIN = A2;
@@ -108,6 +108,9 @@ void loop(){
   uint8_t speedFactor = (rx[0]&0b11000000)>>6;
   ARC=rx[1];
   Serial.print("ARC: "); Serial.println(ARC);
+
+  
+  if(batt<5) speedFactor=1; //LOW DOWN LOW AT LOW BATT
 
                       //    1-3                -3-3
   int throttlePWMdiff = speedFactor * 14 * throttle; // 127/(3*3) = 14.11
