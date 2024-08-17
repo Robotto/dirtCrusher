@@ -59,28 +59,36 @@ void  setup()  {
   Serial.println("Good to go!");
   }
             
+int rssiPWM = 0;
 
 void loop()  {
-  if(LoRa.parsePacket()){
-      rx = (uint8_t)LoRa.read(); 
-      rssi = LoRa.packetRssi();
-      if(LoRa.available()) LoRa.flush(); //flush the RX buffer...                   
-      //Serial.print("RX!: "); 
-      //Serial.print(rx,BIN); 
-      //Serial.print(", with RSSI: ");
-      //Serial.print(rssi); 
-      //Serial.print(','); 
-      //Serial.print(millis()-(nextFailsafeTimeout-failsafeTimeout)); //milliseconds since last RX
-      //Serial.println();
-      nextFailsafeTimeout = millis() + failsafeTimeout;
-    }
+
   if(millis() > nextFailsafeTimeout) {
     rx = failsafeVal;
     rssi = -150;
+    rssiPWM = 0;
+
   }
+
+  if(LoRa.parsePacket()){
+      rx = (uint8_t)LoRa.read(); 
+      rssi = LoRa.packetRssi();
+      rssiPWM = map(rssi,-150,20,0,255);
+      if(LoRa.available()) LoRa.flush(); //flush the RX buffer...                   
+      /*
+      //Serial.print("RX!: "); 
+      //Serial.print(rx,BIN); 
+      //Serial.print(",");// with RSSI: ");
+      Serial.print(rssi); 
+      Serial.print(','); 
+      Serial.print(millis()-(nextFailsafeTimeout-failsafeTimeout)); //milliseconds since last RX
+      Serial.println();
+      */
+      nextFailsafeTimeout = millis() + failsafeTimeout;
+    }
+
   
   //Report RSSI over PWM to OSD :D
-  int rssiPWM = map(rssi,-150,20,0,255);
   analogWrite(PWMrssiPin,rssiPWM);
 
   //Parse received data:
@@ -102,7 +110,7 @@ void loop()  {
   if(steeringDelta<0) steeringDriver.forward();//need to go left
   else if(steeringDelta>0) steeringDriver.reverse();//need to go right
   else steeringDriver.brake(); //need to go nowhere  
-
+//  Serial.println(steeringDelta);
 /*
   Serial.print(rx,BIN); 
   Serial.print(" "); 
@@ -110,19 +118,31 @@ void loop()  {
   Serial.print(" "); 
   Serial.print(throttle);
   Serial.print(" "); 
+  */
+  Serial.print(pwmVal);
+  Serial.print(" "); 
   Serial.print(mapVal);
+  /*
   Serial.print(" ");
   Serial.print(speedFactor);
   Serial.print(" ");
   Serial.print(steering);
+  */
   Serial.println();
-*/
+
 }
                
 int readSteeringFeedback(){ //negative is turning left!
   int aState = digitalRead(steeringFeedbackPinA);
   int bState = digitalRead(steeringFeedbackPinB);
   int cState = digitalRead(steeringFeedbackPinC);
+/*
+  Serial.print(aState);
+  Serial.print(" "); 
+  Serial.print(bState);
+  Serial.print(" "); 
+  Serial.println(cState);
+*/
   if( aState & bState & cState ) return previousState; //non-discrete in-between-state with all pins high - Keep moving the steering.
   //Now we know the feedback is in a discrete state:
   if( bState ) return 2-cState+aState; //Steering feedback is positive (1,2,3)
