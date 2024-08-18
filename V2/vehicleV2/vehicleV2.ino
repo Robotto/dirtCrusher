@@ -92,9 +92,9 @@ void loop()  {
   analogWrite(PWMrssiPin,rssiPWM);
 
   //Parse received data:
-  int throttle = -3+(rx&0b00000111);
-  int steering = (-3+((rx&0b00111000)>>3))*(-1); //-1 reverses steering direction.
-  uint8_t speedFactor = (rx&0b11000000)>>6;
+  int throttle = -3+(rx&0b00000111); //RX: 0 -> 6 , want: -3 -> 3
+  int steering = (-3+((rx&0b00111000)>>3))*(-1); //-3 -> 3 (-1 reverses steering direction.)
+  uint8_t speedFactor = (rx&0b11000000)>>6; //1-3
   
   //Handle speed:
                       //    1-3                -3-3
@@ -114,21 +114,22 @@ void loop()  {
 /*
   Serial.print(rx,BIN); 
   Serial.print(" "); 
+
   Serial.print(rssi);
   Serial.print(" "); 
   Serial.print(throttle);
   Serial.print(" "); 
-  */
+  
   Serial.print(pwmVal);
   Serial.print(" "); 
   Serial.print(mapVal);
-  /*
+  
   Serial.print(" ");
   Serial.print(speedFactor);
   Serial.print(" ");
   Serial.print(steering);
   */
-  Serial.println();
+  //Serial.println();
 
 }
                
