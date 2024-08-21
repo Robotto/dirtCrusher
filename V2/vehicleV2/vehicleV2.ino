@@ -29,8 +29,19 @@ int previousState = 0; //holds steering feedback position from last read.
 
 
 //Objects:
-DRV8871 steeringDriver(steeringDriverPin1,steeringDriverPin1);
+DRV8871 steeringDriver(steeringDriverPin1,steeringDriverPin2);
 
+void noTurn(){
+  steeringDriver.brake(); 
+}
+
+void turnLeft(){
+  steeringDriver.reverse();
+}
+
+void turnRight(){
+  steeringDriver.forward();
+}
 
 void  setup()  {
   Serial.begin(115200);
@@ -107,10 +118,16 @@ void loop()  {
   //Handle steering:
   previousState = readSteeringFeedback();
   int steeringDelta = steering-previousState; 
-  if(steeringDelta<0) steeringDriver.forward();//need to go left
-  else if(steeringDelta>0) steeringDriver.reverse();//need to go right
-  else steeringDriver.brake(); //need to go nowhere  
-//  Serial.println(steeringDelta);
+  if(steeringDelta==0) noTurn(); //need to go nowhere  
+  else if(steeringDelta<0) turnLeft();
+  else if(steeringDelta>0) turnRight();
+  /*
+  Serial.print(steering);
+  Serial.print(',');
+  Serial.print(previousState);
+  Serial.print(',');
+  Serial.println(steeringDelta);
+  */
 /*
   Serial.print(rx,BIN); 
   Serial.print(" "); 
