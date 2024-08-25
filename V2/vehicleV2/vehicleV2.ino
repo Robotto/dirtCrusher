@@ -43,6 +43,12 @@ void turnRight(){
   steeringDriver.forward();
 }
 
+//TODO: LOOK AT void LoRaClass::enableCrc()
+//void LoRaClass::setSignalBandwidth(long sbw)
+//void LoRaClass::setGain(uint8_t gain)
+//READ THIS: https://forum.arduino.cc/t/what-is-lora/595381
+
+
 void  setup()  {
   Serial.begin(115200);
   //while(!Serial);
@@ -84,17 +90,18 @@ void loop()  {
   if(LoRa.parsePacket()){
       rx = (uint8_t)LoRa.read(); 
       rssi = LoRa.packetRssi();
-      rssiPWM = map(rssi,-150,20,0,255);
+      //TODO: Have a look at LoRa.packetSnr()
+      rssiPWM = map(rssi,20,-150,0,255);
       if(LoRa.available()) LoRa.flush(); //flush the RX buffer...                   
-      /*
+      
       //Serial.print("RX!: "); 
       //Serial.print(rx,BIN); 
       //Serial.print(",");// with RSSI: ");
-      Serial.print(rssi); 
-      Serial.print(','); 
-      Serial.print(millis()-(nextFailsafeTimeout-failsafeTimeout)); //milliseconds since last RX
-      Serial.println();
-      */
+      //Serial.print(rssi); 
+      //Serial.print(','); 
+      //Serial.print(millis()-(nextFailsafeTimeout-failsafeTimeout)); //milliseconds since last RX
+      //Serial.println();
+      
       nextFailsafeTimeout = millis() + failsafeTimeout;
     }
 
