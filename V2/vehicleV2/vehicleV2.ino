@@ -17,7 +17,7 @@ const int LoRaResetPin = A1; //output
 const int LoRaDioPin = A2; //input
 
 //Constants:
-const int failsafeTimeout = 250; //ms
+const int failsafeTimeout = 500; //ms
 const uint8_t failsafeVal = 0b01011011;
 const unsigned int STOP_PWM_VAL = 127;
 
@@ -42,12 +42,7 @@ void turnLeft(){
 void turnRight(){
   steeringDriver.forward();
 }
-
-//TODO: LOOK AT void LoRaClass::enableCrc()
-//void LoRaClass::setSignalBandwidth(long sbw)
-//void LoRaClass::setGain(uint8_t gain)
-//READ THIS: https://forum.arduino.cc/t/what-is-lora/595381
-
+float SNR_MINIMUM=-12.5;
 
 void  setup()  {
   Serial.begin(115200);
@@ -57,6 +52,27 @@ void  setup()  {
     Serial.println("Starting LoRa failed!");
     while (1);
   }
+
+  //READ THIS: https://forum.arduino.cc/t/what-is-lora/595381
+  //LoRa.enableCrc();
+  LoRa.setSpreadingFactor(9); //https://github.com/sandeepmistry/arduino-LoRa/blob/master/API.md#spreading-factor
+
+/*
+SNR Limits for Spreading factor:
+
+SF7 -7.5dB
+SF8 -10dB
+SF9 -12.5dB
+SF10 -15dB
+SF11 -17.5dB
+SF12 -20dB
+*/
+
+
+  LoRa.setSignalBandwidth(125E3); //default: 125E3  - https://github.com/sandeepmistry/arduino-LoRa/blob/master/API.md#signal-bandwidth
+  //void LoRaClass::setGain(uint8_t gain) //default: AGC
+  
+
   /* PRESCALE DIVIDER FOR PWM FRQ ON PINS 9 and 10:
   16'000'000 / 256 / 2 = 31250Hz 
   0x01 1 31250
@@ -89,9 +105,10 @@ void loop()  {
 
   if(LoRa.parsePacket()){
       rx = (uint8_t)LoRa.read(); 
-      rssi = LoRa.packetRssi();
+      //rssi = LoRa.packetRssi();
       //TODO: Have a look at LoRa.packetSnr()
-      rssiPWM = map(rssi,20,-150,0,255);
+      rssi=LoRa.packetSnr();
+      rssiPWM = map(rssi,SNR_MINIMUM,10,0,255);
       if(LoRa.available()) LoRa.flush(); //flush the RX buffer...                   
       
       //Serial.print("RX!: "); 

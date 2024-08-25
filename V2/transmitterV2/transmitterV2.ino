@@ -37,10 +37,17 @@ void setup() {
   Serial.begin(115200);
 
   LoRa.setPins(LoRaSSPin, LoRaResetPin, LoRaDioPin);
+  
   if (!LoRa.begin(433E6)) {
     Serial.println("Starting LoRa failed!");
     while (1);
   }
+  //READ THIS: https://forum.arduino.cc/t/what-is-lora/595381
+  //LoRa.enableCrc();
+  LoRa.setSpreadingFactor(9); //https://github.com/sandeepmistry/arduino-LoRa/blob/master/API.md#spreading-factor
+  LoRa.setSignalBandwidth(125E3); //default: 125E3  - https://github.com/sandeepmistry/arduino-LoRa/blob/master/API.md#signal-bandwidth
+  //void LoRaClass::setGain(uint8_t gain) //default: AGC
+  
 
   //Controller pins
   digitalWrite(xPin,LOW);
@@ -65,7 +72,7 @@ void loop() {
 
   uint8_t payload = speed << 6 | steeringVal << 3 | throttleVal; ///JOIN THE VALUES into one byte
    
-  if(millis()-lastTXtime > TXPERIOD || payload != lastPayload) 
+  if(millis()-lastTXtime > TXPERIOD)// || payload != lastPayload) 
   { 
    if (LoRa.beginPacket()) //If radio is ready to transmit
         {
