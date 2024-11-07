@@ -1,5 +1,5 @@
 # dirtCrusher
-Reverse engineering and replacing most of the innards og a LEGO dirt crusher
+Reverse engineering and replacing most of the innards of a LEGO dirt crusher
 
 Current version implements a 2 byte per frame radio link with a pair of NRF24L01+ modules.
 
