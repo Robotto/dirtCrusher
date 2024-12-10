@@ -21,35 +21,45 @@ AlfredoCRSF crsf;
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(250000);
    Serial.println("COM Serial initialized");
   
-  Serial1.begin(420000);
+  Serial1.begin(250000);
   if (!Serial1) while (1) Serial.println("Invalid crsfSerial configuration");
 
   crsf.begin(Serial1);
 }
 
 float cap = 0;
+
+
 void loop()
 {
   
   // Must call crsf.update() in loop() to process data
   crsf.update();
 if(crsf.isLinkUp()){
-  uint8_t RSSI = crsf.getLinkStatistics()->downlink_RSSI;
-  uint8_t LQ = crsf.getLinkStatistics()->downlink_Link_quality;
-  int8_t SNR = crsf.getLinkStatistics()->downlink_SNR;
-  Serial.print("RSSI="); Serial.print(String(RSSI)); Serial.print(",LQ="); Serial.print(String(LQ)); Serial.print(",SNR="); Serial.println(String(SNR));
+  const crsfLinkStatistics_t* stat_ptr = crsf.getLinkStatistics();
+  int RSSI = stat_ptr->downlink_RSSI;
+  int LQ = stat_ptr->downlink_Link_quality;
+  int SNR = stat_ptr->downlink_SNR;
+  
+  //Serial.print("Throttle=");
+  Serial.print(crsf.getChannel(3));
+  Serial.print(",");//\tRSSI=");
+  Serial.print(crsf.getChannel(4));
+  Serial.print(",");//\tRSSI=");
+  Serial.print(String(RSSI));
+  Serial.print(",");//\tLQ=");
+  Serial.print(String(LQ));
+  Serial.print(",");//\tSNR=");
+  Serial.print(String(SNR));
+  Serial.print(",");
+  Serial.println(2500); //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
   }
   int snsVin = analogRead(PIN_SNS_VIN);
   float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
   sendRxBattery(batteryVoltage, 1.2, cap += 10, 50);
-
-//for(int i=0;i<17;i++)  Serial.println(crsf.getChannel(i));
-//Serial.println();
-Serial.println(crsf.getChannel(3));
-//  Serial.print("RX buffer: "); Serial.println(Serial1.available());
 
 
   delay(10);
