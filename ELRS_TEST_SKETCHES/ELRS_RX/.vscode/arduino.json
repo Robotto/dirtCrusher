@@ -1,6 +1,6 @@
 {
     "board": "arduino:avr:leonardo",
-    "port": "COM16",
-    "sketch": "ELRS_TX.ino",
+    "port": "COM22",
+    "sketch": "ELRS_RX.ino",
     "output": "../output"
 }

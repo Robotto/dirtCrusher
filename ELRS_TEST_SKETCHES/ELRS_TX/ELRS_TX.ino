@@ -30,7 +30,7 @@
 #include "led.h"
 #include "tone.h"
 
-#define DEBUG // if not commented out, Serial.print() is active! For debugging only!!
+//#define DEBUG // if not commented out, Serial.print() is active! For debugging only!!
 //#define GIMBAL_CALIBRATION // if not commented out, Serial.print() is active! For debugging only!!
 
 int Aileron_value = 0; // values read from the pot
@@ -371,7 +371,7 @@ bool checkStickMove(){
 
     if (millis() - stickMovedMillis > STICK_ALARM_TIME){
        // Serial.println((millis() - stickMovedMillis));
-        return true;
+        return false; //TODO: CHANGE THIS BACK!!
     }else{
         return false;
     }
@@ -459,9 +459,9 @@ void loop()
 
     // Read Voltage
     batteryVoltage = analogRead(VOLTAGE_READ_PIN) / VOLTAGE_SCALE; // 98.5
-    Serial.print("batteryVoltage:");
-    Serial.print(batteryVoltage);
-    Serial.print("v ");
+    //Serial.print("batteryVoltage:");
+    //Serial.print(batteryVoltage);
+    //Serial.print("v ");
     if (batteryVoltage < WARNING_VOLTAGE && batteryVoltage >= BEEPING_VOLTAGE) {
         blinkLED(DIGITAL_PIN_LED, 500);
     }else if(batteryVoltage < BEEPING_VOLTAGE && batteryVoltage >= ON_USB){
@@ -519,7 +519,12 @@ void loop()
     //Constrain value to avoid overflow
     Aileron_value  = constrain(Aileron_value,  ADC_MIN, ADC_MAX); 
     Elevator_value = constrain(Elevator_value, ADC_MIN, ADC_MAX); 
-    Throttle_value = constrain(Throttle_value, ADC_MIN, ADC_MAX); 
+
+    
+Throttle_value = (uint16_t)((1.0+sin((float)millis()/500))*ADC_MAX);
+    Throttle_value = constrain(Throttle_value, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX); 
+    Serial.println(Throttle_value);
+
     Rudder_value   = constrain(Rudder_value,   ADC_MIN, ADC_MAX); 
 
     //Handdle reverse
@@ -579,7 +584,8 @@ void loop()
     }
 
     if (currentMicros > crsfTime) {
-            //Serial.println("DEBUG");
+        /*
+        Serial.println("DEBUG");
         Serial.print(" AILERON:");
         Serial.print(rcChannels[AILERON]);
         Serial.print(" ELEVATOR:");
@@ -593,6 +599,7 @@ void loop()
         Serial.print(" previous_throttle:");
         Serial.print(previous_throttle);
         Serial.println(); 
+        */
             if (loopCount <= 500) { // repeat 500 packets to build connection to TX module
                 // Build commond packet
                 crsfClass.crsfPrepareDataPacket(crsfPacket, rcChannels);
