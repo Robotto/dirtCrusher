@@ -33,52 +33,61 @@ void setup()
 float cap = 0;
 
 
+float RSSI_WORST=108.0; //dBm (negative)
+float RSSI_BEST=45.0;  //dBm (negative)
+float RSSI_PERCENT=0;
+int throttle = 0;
+int rudder = 0;
+
 void loop()
-{
-  
+{ 
   // Must call crsf.update() in loop() to process data
   crsf.update();
-if(crsf.isLinkUp()){
+
   const crsfLinkStatistics_t* stat_ptr = crsf.getLinkStatistics();
-  int RSSI = stat_ptr->downlink_RSSI;
-  int LQ = stat_ptr->downlink_Link_quality;
-  int SNR = stat_ptr->downlink_SNR;
+  uint8_t RSSI_1 = stat_ptr->uplink_RSSI_1;
+  uint8_t RSSI_2 = stat_ptr->uplink_RSSI_2;
+  uint8_t RSSI = min(RSSI_1,RSSI_2);
+  RSSI_PERCENT = map(RSSI,RSSI_WORST,RSSI_BEST,0,100);
+  RSSI_PERCENT = constrain(RSSI_PERCENT, 0, 100);
+  //uint8_t LQ = stat_ptr->uplink_Link_quality;
+
+if(crsf.isLinkUp()){
+  uint16_t rxThrottle = crsf.getChannel(3);
+  throttle = 0;
+  if (rxThrottle > 1600) throttle=1;
+  if (rxThrottle > 1900) throttle=2;
+  if (rxThrottle < 1400) throttle=-1;
+  if (rxThrottle < 1100) throttle=-2;
   
-  /*
-  //Serial.print("Throttle=");
-  Serial.print(crsf.getChannel(3));
-  Serial.print(",");//\tRSSI=");
-  Serial.print(crsf.getChannel(4));
-  Serial.print(",");//\tRSSI=");
-  Serial.print(RSSI);
-  Serial.print(",");//\tLQ=");
-  Serial.print(LQ);
-  Serial.print(",");//\tSNR=");
-  Serial.print(String(SNR));
-  Serial.print(",");
-  Serial.println(2500); //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
-  */
+  uint16_t rxRudder = crsf.getChannel(4);
+  rudder = 0;
+  if (rxRudder > 1600) rudder=1;
+  if (rxRudder > 1900) rudder=2;
+  if (rxRudder < 1400) rudder=-1;
+  if (rxRudder < 1100) rudder=-2;
 
-  /*
-  //https://github.com/crsf-wg/crsf/wiki/CRSF_FRAMETYPE_LINK_STATISTICS
-  modify the case on line 107 AlfredoCRSF.cpp to this:
-          case CRSF_FRAMETYPE_LINK_STATISTICS:
-            packetLinkStatistics(hdr);
-            Serial.print("RSSI_1:-" + String(_rxBuf[3])); 
-            Serial.print(",");
-            Serial.print("RSSI_2:-" + String(_rxBuf[4])); 
-            Serial.print(",");
-            Serial.print("LQ:" + String(_rxBuf[5])); 
-            Serial.print(",");
-            Serial.print("SNR:" + String(_rxBuf[6])); 
-            Serial.println();
-            break;
-  */
 
-  }
   int snsVin = analogRead(PIN_SNS_VIN);
   float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
   sendRxBattery(batteryVoltage, 1.2, cap += 10, 50);
+} //https://github.com/crsf-wg/crsf/wiki/CRSF_FRAMETYPE_LINK_STATISTICS
+else{
+   throttle=0;
+   rudder=0;
+}
+
+  Serial.print("Throttle:");
+  Serial.print(throttle);
+  Serial.print(",Rudder:");
+  Serial.print(rudder);
+  Serial.print(",RSSI%:");
+  Serial.print((float)RSSI_PERCENT/100.0);
+
+  Serial.print(",MIN:");
+  Serial.print(-2);
+  Serial.print(",MAX:");
+  Serial.println(2); //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
 
 
   delay(10);
