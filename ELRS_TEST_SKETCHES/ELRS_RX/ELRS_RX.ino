@@ -60,6 +60,7 @@ if(crsf.isLinkUp()){
   */
 
   /*
+  //https://github.com/crsf-wg/crsf/wiki/CRSF_FRAMETYPE_LINK_STATISTICS
   modify the case on line 107 AlfredoCRSF.cpp to this:
           case CRSF_FRAMETYPE_LINK_STATISTICS:
             packetLinkStatistics(hdr);
