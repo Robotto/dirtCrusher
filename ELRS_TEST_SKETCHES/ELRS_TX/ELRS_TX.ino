@@ -94,7 +94,7 @@ void setup()
     }
     batteryVoltage = 0.0;
 
-        Serial.begin(115200);
+        Serial.begin(250000);
         crsfClass.begin(); //Set to use Serial1 on the Leonardo...
 
 }
@@ -124,12 +124,10 @@ void loop()
 
     
     
-Throttle_value = (uint16_t)((1.0+sin((float)millis()/1000.0))*ADC_MAX);
+Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
    // Throttle_value = constrain(Throttle_value, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX); 
-    Serial.print(Throttle_value);
 
-    Rudder_value = (uint16_t)((1.0+cos((float)millis()/1000.0))*ADC_MAX);
-    Serial.println(Rudder_value);
+    Rudder_value = (uint16_t)(((1.0+cos((float)millis()/1000.0))*0.5)*ADC_MAX);
 
     // rcChannels[AILERON] = map(Aileron_value, 1023 - ANALOG_CUTOFF, ANALOG_CUTOFF, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);   // reverse
     // rcChannels[ELEVATOR] = map(Elevator_value, 1023 - ANALOG_CUTOFF, ANALOG_CUTOFF, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX); // reverse
@@ -139,6 +137,16 @@ Throttle_value = (uint16_t)((1.0+sin((float)millis()/1000.0))*ADC_MAX);
     rcChannels[ELEVATOR]  = 0;
     rcChannels[THROTTLE]  = map(Throttle_value, ADC_MIN, ADC_MAX, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
     rcChannels[RUDDER]    = map(Rudder_value,   ADC_MIN, ADC_MAX, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
+
+
+    Serial.print(rcChannels[THROTTLE]);
+    Serial.print(",");
+    Serial.print(rcChannels[RUDDER]);
+    Serial.print(",");
+    Serial.print(0);
+    Serial.print(",");
+    Serial.println(2500);
+    
 
     if(stickInt=0){
         previous_throttle=rcChannels[THROTTLE];
@@ -206,7 +214,7 @@ Throttle_value = (uint16_t)((1.0+sin((float)millis()/1000.0))*ADC_MAX);
         crsfTime = currentMicros + CRSF_TIME_BETWEEN_FRAMES_US;
     }
 }
-
+/*
 ISR(TIMER1_COMPA_vect) { // leave this alone
     static boolean state = true;
 
@@ -235,3 +243,4 @@ ISR(TIMER1_COMPA_vect) { // leave this alone
         }
     }
 }
+*/

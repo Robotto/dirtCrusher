@@ -44,18 +44,36 @@ if(crsf.isLinkUp()){
   int LQ = stat_ptr->downlink_Link_quality;
   int SNR = stat_ptr->downlink_SNR;
   
+  /*
   //Serial.print("Throttle=");
   Serial.print(crsf.getChannel(3));
   Serial.print(",");//\tRSSI=");
   Serial.print(crsf.getChannel(4));
   Serial.print(",");//\tRSSI=");
-  Serial.print(String(RSSI));
+  Serial.print(RSSI);
   Serial.print(",");//\tLQ=");
-  Serial.print(String(LQ));
+  Serial.print(LQ);
   Serial.print(",");//\tSNR=");
   Serial.print(String(SNR));
   Serial.print(",");
   Serial.println(2500); //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
+  */
+
+  /*
+  modify the case on line 107 AlfredoCRSF.cpp to this:
+          case CRSF_FRAMETYPE_LINK_STATISTICS:
+            packetLinkStatistics(hdr);
+            Serial.print("RSSI_1:-" + String(_rxBuf[3])); 
+            Serial.print(",");
+            Serial.print("RSSI_2:-" + String(_rxBuf[4])); 
+            Serial.print(",");
+            Serial.print("LQ:" + String(_rxBuf[5])); 
+            Serial.print(",");
+            Serial.print("SNR:" + String(_rxBuf[6])); 
+            Serial.println();
+            break;
+  */
+
   }
   int snsVin = analogRead(PIN_SNS_VIN);
   float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
