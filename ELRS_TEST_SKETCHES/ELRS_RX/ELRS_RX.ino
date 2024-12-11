@@ -34,7 +34,7 @@ float cap = 0;
 
 
 float RSSI_WORST=108.0; //dBm (negative)
-float RSSI_BEST=45.0;  //dBm (negative)
+float RSSI_BEST=50.0;  //dBm (negative)
 float RSSI_PERCENT=0;
 int throttle = 0;
 int rudder = 0;
