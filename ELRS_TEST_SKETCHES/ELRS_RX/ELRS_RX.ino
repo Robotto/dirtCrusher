@@ -36,9 +36,10 @@ float cap = 0;
 float RSSI_WORST=108.0; //dBm (negative)
 float RSSI_BEST=50.0;  //dBm (negative)
 float RSSI_PERCENT=0;
+uint16_t batteryVoltage;
 int throttle = 0;
 int rudder = 0;
-
+unsigned long lastTXtime=0;
 void loop()
 { 
   // Must call crsf.update() in loop() to process data
@@ -69,8 +70,13 @@ if(crsf.isLinkUp()){
 
 
   int snsVin = analogRead(PIN_SNS_VIN);
-  float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
+ // float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
+  if(millis()-lastTXtime>250){
+  batteryVoltage=(uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*10.0);
   sendRxBattery(batteryVoltage, 1.2, cap += 10, 50);
+  lastTXtime=millis();
+  }
+
 } //https://github.com/crsf-wg/crsf/wiki/CRSF_FRAMETYPE_LINK_STATISTICS
 else{
    throttle=0;
@@ -83,6 +89,8 @@ else{
   Serial.print(rudder);
   Serial.print(",RSSI%:");
   Serial.print((float)RSSI_PERCENT/100.0);
+  Serial.print(",batt:");
+  Serial.print(batteryVoltage);
 
   Serial.print(",MIN:");
   Serial.print(-2);
@@ -98,7 +106,7 @@ static void sendRxBattery(float voltage, float current, float capacity, float re
   crsf_sensor_battery_t crsfBatt = { 0 };
 
   // Values are MSB first (BigEndian)
-  crsfBatt.voltage = htobe16((uint16_t)(voltage * 10.0));   //Volts
+  crsfBatt.voltage = htobe16((uint16_t)(voltage));   //Volts
   crsfBatt.current = htobe16((uint16_t)(current * 10.0));   //Amps
   crsfBatt.capacity = htobe16((uint16_t)(capacity)) << 8;   //mAh (with this implemetation max capacity is 65535mAh)
   crsfBatt.remaining = (uint8_t)(remaining);                //percent

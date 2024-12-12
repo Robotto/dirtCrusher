@@ -217,18 +217,34 @@ bool CRSF::linkUP(void){
 
 void CRSF::processTelemetry(uint8_t len)
 {
+//  Serial.print("RX! ADDR:");
     const crsf_header_t *hdr = (crsf_header_t *)_rxBuf;
-    if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
-    {
+//   Serial.println(hdr->device_addr,HEX);
+//    if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
+//    {
+  
+
         if(hdr->type == CRSF_FRAMETYPE_BATTERY_SENSOR){
+          
+
         crsf_sensor_battery_t *batt = (crsf_sensor_battery_t *)hdr->data;
         _batt.voltage = be16toh(batt->voltage);
         _batt.current = be16toh(batt->current);
         _batt.capacity = be16toh(batt->capacity);
         _batt.remaining = be16toh(batt->remaining);
+        
+          Serial.print("V:");
+          Serial.print(batt->voltage);
+          Serial.print(",I:");
+          Serial.print(batt->current);
+          Serial.print(",Cap:");
+          Serial.print(batt->capacity);
+          Serial.print(",%:");
+          Serial.print(batt->remaining);
+          Serial.println();
         }
         
-    }
+    
 }
 
 crsf_sensor_battery_t CRSF::getBatt(void){

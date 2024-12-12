@@ -145,7 +145,7 @@ Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
     rcChannels[THROTTLE]  = map(Throttle_value, ADC_MIN, ADC_MAX, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
     rcChannels[RUDDER]    = map(Rudder_value,   ADC_MIN, ADC_MAX, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
 
-
+/*
     Serial.print(rcChannels[THROTTLE]);
     Serial.print(",");
     Serial.print(rcChannels[RUDDER]);
@@ -155,7 +155,7 @@ Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
     Serial.print(0);
     Serial.print(",");
     Serial.println(2500);
-    
+*/    
 
     if(stickInt=0){
         previous_throttle=rcChannels[THROTTLE];
