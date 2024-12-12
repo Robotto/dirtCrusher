@@ -1,4 +1,0 @@
-{
-    "board": "arduino:avr:leonardo",
-    "sketch": "ELRS_TEST_SKETCHES\\ELRS_RX\\ELRS_RX.ino"
-}
