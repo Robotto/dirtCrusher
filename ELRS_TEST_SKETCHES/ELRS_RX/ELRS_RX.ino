@@ -40,6 +40,11 @@ uint16_t batteryVoltage;
 int throttle = 0;
 int rudder = 0;
 unsigned long lastTXtime=0;
+
+uint16_t lowest = 1000;
+uint16_t highest = 1000;
+
+
 void loop()
 { 
   // Must call crsf.update() in loop() to process data
@@ -63,6 +68,9 @@ if(crsf.isLinkUp()){
   if (rxThrottle > 1900) throttle=2;
   if (rxThrottle < 1400) throttle=-1;
   if (rxThrottle < 1100) throttle=-2;
+
+
+
   
   uint16_t rxRudder = crsf.getChannel(4);
   rudder = 0;
@@ -70,6 +78,8 @@ if(crsf.isLinkUp()){
   if (rxRudder > 1900) rudder=2;
   if (rxRudder < 1400) rudder=-1;
   if (rxRudder < 1100) rudder=-2;
+
+
 
 
   int snsVin = analogRead(PIN_SNS_VIN);
