@@ -99,16 +99,26 @@ void setup()
 
 }
 
+float RSSI_WORST=108.0; //dBm (negative)
+float RSSI_BEST=50.0;  //dBm (negative)
+float RSSI_PERCENT=0;
 void loop()
 {
-    int16_t receiverBatteryVoltage;
+    uint16_t receiverBatteryVoltage;
 
     uint32_t currentMicros = micros();
     crsfClass.update();
 
-    if(crsfClass.linkUP()){
-      receiverBatteryVoltage = crsfClass.getBatt().voltage;
-    }
+    RSSI_PERCENT=0;
+    if(crsfClass.linkUP())
+{
+      const crsf_sensor_battery_t* batt = crsfClass.getBatt();
+      receiverBatteryVoltage = batt->voltage;
+      const crsfLinkStatistics_t* stat_ptr = crsfClass.getLinkStatistics();
+      uint8_t RSSI = stat_ptr->downlink_RSSI;
+      RSSI_PERCENT = map(RSSI,RSSI_WORST,RSSI_BEST,0,100);
+      RSSI_PERCENT = constrain(RSSI_PERCENT, 0, 100);
+}   
 
     // Read Voltage
     batteryVoltage = analogRead(VOLTAGE_READ_PIN) / VOLTAGE_SCALE; // 98.5
@@ -145,17 +155,20 @@ Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
     rcChannels[THROTTLE]  = map(Throttle_value, ADC_MIN, ADC_MAX, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
     rcChannels[RUDDER]    = map(Rudder_value,   ADC_MIN, ADC_MAX, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
 
-/*
+
+    Serial.print("THROTTLE:");
     Serial.print(rcChannels[THROTTLE]);
-    Serial.print(",");
+    Serial.print(",RUDDER:");
     Serial.print(rcChannels[RUDDER]);
-    Serial.print(",");
-    Serial.print(receiverBatteryVoltage);
-    Serial.print(",");
+    Serial.print(",BATTERY:");
+    Serial.print(receiverBatteryVoltage*10);
+    Serial.print(",TELEMETRY_RSSI%:");
+    Serial.print(RSSI_PERCENT*10);
+    Serial.print(",MIN:");
     Serial.print(0);
-    Serial.print(",");
-    Serial.println(2500);
-*/    
+    Serial.print(",MAX:");
+    Serial.println(CRSF_DIGITAL_CHANNEL_MAX);
+  
 
     if(stickInt=0){
         previous_throttle=rcChannels[THROTTLE];

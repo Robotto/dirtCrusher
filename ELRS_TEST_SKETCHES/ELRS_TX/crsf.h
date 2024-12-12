@@ -54,6 +54,8 @@
 // ELRS command
 #define CRSF_ADDRESS_FLIGHT_CONTROLLER  0xC8
 #define CRSF_FRAMETYPE_BATTERY_SENSOR   0x08
+#define CRSF_FRAMETYPE_LINK_STATISTICS  0x14
+
 
 #define ELRS_ADDRESS                    0xEE
 #define ELRS_PKT_RATE_COMMAND           0x01
@@ -77,6 +79,20 @@ typedef struct crsf_sensor_battery_s
     unsigned capacity : 24; // mah big endian
     unsigned remaining : 8; // %
 } PACKED crsf_sensor_battery_t;
+
+typedef struct crsfPayloadLinkstatistics_s
+{
+    uint8_t uplink_RSSI_1;
+    uint8_t uplink_RSSI_2;
+    uint8_t uplink_Link_quality;
+    int8_t uplink_SNR;
+    uint8_t active_antenna;
+    uint8_t rf_Mode;
+    uint8_t uplink_TX_Power;
+    uint8_t downlink_RSSI;
+    uint8_t downlink_Link_quality;
+    int8_t downlink_SNR;
+} crsfLinkStatistics_t;
 
 typedef struct crsf_header_s
 {
@@ -106,7 +122,9 @@ public:
     void crsfPrepareCmdPacket(uint8_t packetCmd[], uint8_t command, uint8_t value);
     void CrsfWritePacket(uint8_t packet[], uint8_t packetLength);
     void update(void);
-    crsf_sensor_battery_t getBatt(void);
+    const crsf_sensor_battery_t *getBatt() const { return &_batt; }
+    const crsfLinkStatistics_t *getLinkStatistics() const { return &_linkStatistics; }
+
     bool linkUP(void);
 
 
@@ -117,6 +135,7 @@ private:
     uint32_t _lastReceive;
     uint32_t _lastChannelsPacket;
     bool _linkIsUp;
+    crsfLinkStatistics_t _linkStatistics;
     crsf_sensor_battery_t _batt;
 
     

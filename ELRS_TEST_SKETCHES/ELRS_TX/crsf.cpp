@@ -1,3 +1,4 @@
+#include "Arduino.h"
 /*
  * This file is part of Simple TX
  *
@@ -212,7 +213,8 @@ void CRSF::checkLinkDown()
 }
 
 bool CRSF::linkUP(void){
-  return _linkIsUp;
+  if(_linkIsUp) return true;
+  return false;
 }
 
 void CRSF::processTelemetry(uint8_t len)
@@ -223,33 +225,27 @@ void CRSF::processTelemetry(uint8_t len)
 //    if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
 //    {
   
-
-        if(hdr->type == CRSF_FRAMETYPE_BATTERY_SENSOR){
-          
-
-        crsf_sensor_battery_t *batt = (crsf_sensor_battery_t *)hdr->data;
-        _batt.voltage = be16toh(batt->voltage);
-        _batt.current = be16toh(batt->current);
-        _batt.capacity = be16toh(batt->capacity);
-        _batt.remaining = be16toh(batt->remaining);
-        
-          Serial.print("V:");
-          Serial.print(batt->voltage);
-          Serial.print(",I:");
-          Serial.print(batt->current);
-          Serial.print(",Cap:");
-          Serial.print(batt->capacity);
-          Serial.print(",%:");
-          Serial.print(batt->remaining);
-          Serial.println();
-        }
-        
-    
+switch (hdr->type) {
+      case CRSF_FRAMETYPE_BATTERY_SENSOR:
+          _lastChannelsPacket=millis();
+          _linkIsUp = true;
+          crsf_sensor_battery_t *batt = (crsf_sensor_battery_t *)hdr->data;
+          _batt.voltage = be16toh(batt->voltage);
+          _batt.current = be16toh(batt->current);
+          _batt.capacity = be16toh(batt->capacity);
+          _batt.remaining = be16toh(batt->remaining);
+          break;
+      case CRSF_FRAMETYPE_LINK_STATISTICS:
+          const crsfLinkStatistics_t *link = (crsfLinkStatistics_t *)hdr->data;
+          memcpy(&_linkStatistics, link, sizeof(_linkStatistics));
+          break;
+      default:
+          break;
+}
+      
 }
 
-crsf_sensor_battery_t CRSF::getBatt(void){
-  return _batt;
-}
+
 
 // Shift the bytes in the RxBuf down by cnt bytes
 void CRSF::shiftRxBuffer(uint8_t cnt)
