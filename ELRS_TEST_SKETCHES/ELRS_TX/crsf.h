@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <stdint.h>
 
+#define PACKED __attribute__((packed))
+
 /*
  * This file is part of Simple TX
  *
@@ -21,6 +23,7 @@
 // Basic setup
 #define CRSF_MAX_CHANNEL        16
 #define CRSF_FRAME_SIZE_MAX     64
+
 // Device address & type
 #define RADIO_ADDRESS           0xEA
 // #define ADDR_MODULE             0xEE  //  Crossfire transmitter
@@ -45,7 +48,13 @@
 #define CRSF_FRAME_LENGTH               24 // length of type + payload + crc
 #define CRSF_CMD_PACKET_SIZE            8
 
+#define CRSF_MAX_PACKET_LEN 64
+
+
 // ELRS command
+#define CRSF_ADDRESS_FLIGHT_CONTROLLER  0xC8
+#define CRSF_FRAMETYPE_BATTERY_SENSOR   0x08
+
 #define ELRS_ADDRESS                    0xEE
 #define ELRS_PKT_RATE_COMMAND           0x01
 #define ELRS_TLM_RATIO_COMMAND          0x02
@@ -61,12 +70,62 @@
 #define ADDR_RADIO                      0xEA //  Radio Transmitter
 #define port                            Serial1
 
+typedef struct crsf_sensor_battery_s
+{
+    unsigned voltage : 16;  // V * 10 big endian
+    unsigned current : 16;  // A * 10 big endian
+    unsigned capacity : 24; // mah big endian
+    unsigned remaining : 8; // %
+} PACKED crsf_sensor_battery_t;
+
+typedef struct crsf_header_s
+{
+    uint8_t device_addr; // from crsf_addr_e
+    uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
+    uint8_t type;        // from crsf_frame_type_e
+    uint8_t data[0];
+} PACKED crsf_header_t;
+
+static inline uint16_t be16toh(uint16_t val)
+{
+#if (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    return val;
+#else
+    return __builtin_bswap16(val);
+#endif
+}
+
 class CRSF {
 public:
+    static const unsigned int CRSF_PACKET_TIMEOUT_MS = 100;
+    static const unsigned int CRSF_FAILSAFE_STAGE1_MS = 300;
+
+
     void begin(void);
     void crsfPrepareDataPacket(uint8_t packet[], int16_t channels[]);
     void crsfPrepareCmdPacket(uint8_t packetCmd[], uint8_t command, uint8_t value);
     void CrsfWritePacket(uint8_t packet[], uint8_t packetLength);
+    void update(void);
+    crsf_sensor_battery_t getBatt(void);
+    bool linkUP(void);
+
+
+
+private:
+    uint8_t _rxBuf[CRSF_MAX_PACKET_LEN+3];
+    uint8_t _rxBufPos;
+    uint32_t _lastReceive;
+    uint32_t _lastChannelsPacket;
+    bool _linkIsUp;
+    crsf_sensor_battery_t _batt;
+
+    
+    void handleSerialIn(); 
+    void handleByteReceived();  ///TODO
+    void shiftRxBuffer(uint8_t cnt); //TODO
+    void processTelemetry(uint8_t len); //TODO
+    void checkPacketTimeout(); //TODO
+    void checkLinkDown(); //TODO
 };
 
 /* ESP32 Team900

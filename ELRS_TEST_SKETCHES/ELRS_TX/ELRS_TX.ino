@@ -101,7 +101,14 @@ void setup()
 
 void loop()
 {
+    int16_t receiverBatteryVoltage;
+
     uint32_t currentMicros = micros();
+    crsfClass.update();
+
+    if(crsfClass.linkUP()){
+      receiverBatteryVoltage = crsfClass.getBatt().voltage;
+    }
 
     // Read Voltage
     batteryVoltage = analogRead(VOLTAGE_READ_PIN) / VOLTAGE_SCALE; // 98.5
@@ -142,6 +149,8 @@ Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
     Serial.print(rcChannels[THROTTLE]);
     Serial.print(",");
     Serial.print(rcChannels[RUDDER]);
+    Serial.print(",");
+    Serial.print(receiverBatteryVoltage);
     Serial.print(",");
     Serial.print(0);
     Serial.print(",");
@@ -214,33 +223,3 @@ Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
         crsfTime = currentMicros + CRSF_TIME_BETWEEN_FRAMES_US;
     }
 }
-/*
-ISR(TIMER1_COMPA_vect) { // leave this alone
-    static boolean state = true;
-
-    TCNT1 = 0;
-
-    if (state) { // start pulse
-        digitalWrite(ppmPin, onState);
-        OCR1A = PULSE_LENGTH * 2;
-        state = false;
-    } else { // end pulse and calculate when to start the next pulse
-        static byte cur_chan_numb;
-        static unsigned int calc_rest;
-
-        digitalWrite(ppmPin, !onState);
-        state = true;
-
-        if (cur_chan_numb >= CHANNEL_NUMBER) {
-            cur_chan_numb = 0;
-            calc_rest = calc_rest + PULSE_LENGTH; //
-            OCR1A = (FRAME_LENGTH - calc_rest) * 2;
-            calc_rest = 0;
-        } else {
-            OCR1A = (map(rcChannels[cur_chan_numb], CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX, 1000, 2000) - PULSE_LENGTH) * 2;
-            calc_rest = calc_rest + map(rcChannels[cur_chan_numb], CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX, 1000, 2000);
-            cur_chan_numb++;
-        }
-    }
-}
-*/

@@ -102,5 +102,5 @@ static void sendRxBattery(float voltage, float current, float capacity, float re
   crsfBatt.current = htobe16((uint16_t)(current * 10.0));   //Amps
   crsfBatt.capacity = htobe16((uint16_t)(capacity)) << 8;   //mAh (with this implemetation max capacity is 65535mAh)
   crsfBatt.remaining = (uint8_t)(remaining);                //percent
-  crsf.queuePacket(CRSF_SYNC_BYTE, CRSF_FRAMETYPE_BATTERY_SENSOR, &crsfBatt, sizeof(crsfBatt));
+  crsf.queuePacket(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BATTERY_SENSOR, &crsfBatt, sizeof(crsfBatt));
 }

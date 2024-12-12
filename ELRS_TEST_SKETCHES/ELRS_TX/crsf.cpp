@@ -132,3 +132,124 @@ void CRSF::crsfPrepareCmdPacket(uint8_t packetCmd[], uint8_t command, uint8_t va
 void CRSF::CrsfWritePacket(uint8_t packet[], uint8_t packetLength) {
     port.write(packet, packetLength);
 }
+
+void CRSF::update()
+{
+    handleSerialIn();
+}
+
+void CRSF::handleSerialIn()
+{
+    while (port.available())
+    {
+        uint8_t b = port.read();
+        _lastReceive = millis();
+
+        _rxBuf[_rxBufPos++] = b;
+        handleByteReceived();
+
+        if (_rxBufPos == (sizeof(_rxBuf)/sizeof(_rxBuf[0])))
+        {
+            // Packet buffer filled and no valid packet found, dump the whole thing
+            _rxBufPos = 0;
+        }
+    }
+
+    checkPacketTimeout();
+    checkLinkDown();
+}
+
+void CRSF::handleByteReceived()
+{
+    bool reprocess;
+    do
+    {
+        reprocess = false;
+        if (_rxBufPos > 1)
+        {
+            uint8_t len = _rxBuf[1];
+            // Sanity check the declared length, can't be shorter than Type, X, CRC
+            if (len < 3 || len > CRSF_MAX_PACKET_LEN)
+            {
+                shiftRxBuffer(1);
+                reprocess = true;
+            }
+
+            else if (_rxBufPos >= (len + 2))
+            {
+                uint8_t inCrc = _rxBuf[2 + len - 1];
+                uint8_t crc = crsf_crc8(&_rxBuf[2], len - 1);
+                if (crc == inCrc)
+                {
+                    processTelemetry(len);
+                    shiftRxBuffer(len + 2);
+                    reprocess = true;
+                }
+                else
+                {
+                    shiftRxBuffer(1);
+                    reprocess = true;
+                }
+            }  // if complete packet
+        } // if pos > 1
+    } while (reprocess);
+}
+
+void CRSF::checkPacketTimeout()
+{
+    // If we haven't received data in a long time, flush the buffer a byte at a time (to trigger shiftyByte)
+    if (_rxBufPos > 0 && millis() - _lastReceive > CRSF_PACKET_TIMEOUT_MS)
+        while (_rxBufPos)
+            shiftRxBuffer(1);
+}
+
+void CRSF::checkLinkDown()
+{
+    if (_linkIsUp && millis() - _lastChannelsPacket > CRSF_FAILSAFE_STAGE1_MS)
+    {
+        _linkIsUp = false;
+    }
+}
+
+bool CRSF::linkUP(void){
+  return _linkIsUp;
+}
+
+void CRSF::processTelemetry(uint8_t len)
+{
+    const crsf_header_t *hdr = (crsf_header_t *)_rxBuf;
+    if (hdr->device_addr == CRSF_ADDRESS_FLIGHT_CONTROLLER)
+    {
+        if(hdr->type == CRSF_FRAMETYPE_BATTERY_SENSOR){
+        crsf_sensor_battery_t *batt = (crsf_sensor_battery_t *)hdr->data;
+        _batt.voltage = be16toh(batt->voltage);
+        _batt.current = be16toh(batt->current);
+        _batt.capacity = be16toh(batt->capacity);
+        _batt.remaining = be16toh(batt->remaining);
+        }
+        
+    }
+}
+
+crsf_sensor_battery_t CRSF::getBatt(void){
+  return _batt;
+}
+
+// Shift the bytes in the RxBuf down by cnt bytes
+void CRSF::shiftRxBuffer(uint8_t cnt)
+{
+    // If removing the whole thing, just set pos to 0
+    if (cnt >= _rxBufPos)
+    {
+        _rxBufPos = 0;
+        return;
+    }
+
+    // Otherwise do the slow shift down
+    uint8_t *src = &_rxBuf[cnt];
+    uint8_t *dst = &_rxBuf[0];
+    _rxBufPos -= cnt;
+    uint8_t left = _rxBufPos;
+    while (left--)
+        *dst++ = *src++;
+}
