@@ -84,10 +84,17 @@ void loop()
       RSSI_PERCENT = constrain(RSSI_PERCENT, 0, 100);
 }   
 
-  uint8_t speed = checkPaddles(); //1, 2 or 3
-  uint8_t throttleVal = 3 + getThrottle(); //-3 to 3 -> 0 to 6
-  uint8_t steeringVal = 3 + getSteering();
+
+  uint8_t speedVal = checkPaddles(); //1, 2 or 3
+  int8_t throttleVal = getThrottle(); //-3 to 3
+  uint8_t steeringVal = 3 + getSteering(); //-3 to 3 -> 0 to 6
     
+  const unsigned int STOP_PWM_VAL = 1500;
+
+                     //    1-3              -3-3
+  int throttlePWMdiff = speedVal * 14 * throttleVal; // 127/(3*3) = 55.5555
+                    //  127             -127 to 127
+  int throttlePWMval = STOP_PWM_VAL + throttlePWMdiff; //0-255
 
 
   //TEST waves:
@@ -95,9 +102,8 @@ void loop()
     //Rudder_value = (uint16_t)(((1.0+cos((float)millis()/1000.0))*0.5)*ADC_MAX); 
 
     //rcChannels[AILERON]   = 0; 
-    rcChannels[ELEVATOR]  = map(speed, 1, 3, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
-    rcChannels[THROTTLE]  = map(throttleVal, 0, 6, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
-    rcChannels[RUDDER]    = map(steeringVal,   0, 6, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
+    rcChannels[THROTTLE]  = map(throttlePWMval, 0, 255, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
+    rcChannels[RUDDER]    = map(steeringVal,   6, 0, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
 
 
     Serial.print("THROTTLE:");

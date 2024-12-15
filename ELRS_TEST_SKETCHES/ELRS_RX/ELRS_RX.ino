@@ -1,23 +1,54 @@
-/*
-This example reads the voltage on pin PIN_SNS_VIN and sends it to your radio in a telemetry packet
-This code assumes you are using a voltage divider with a "high side" resistance of 15K and "low side" resistance of 2.2K
-*/
+#include "drv8871.h"
 
 #include <AlfredoCRSF.h>
+#define CRSF_DIGITAL_CHANNEL_MIN 172
+#define CRSF_DIGITAL_CHANNEL_MAX 1811
+//Pins:
+const int steeringFeedbackPinA = 4;
+const int steeringFeedbackPinB = 5;
+const int steeringFeedbackPinC = 6;
+const int steeringDriverPin1 = 7;
+const int steeringDriverPin2 = 8;
+const int PWMmotorPin = 9;
+const int PWMrssiPin = 10;
 
-#define PIN_RX 0
-#define PIN_TX 1
+//Constants:
+const int failsafeTimeout = 250; //ms
+const unsigned int STOP_PWM_VAL = 127;
 
-#define PIN_SNS_VIN A0
-
-#define RESISTOR1 15000.0
-#define RESISTOR2 2200.0
-#define ADC_RES 1024.0
-#define ADC_VLT 3.3
-
-// Set up a new Serial object
-//HardwareSerial crsfSerial(Serial1);
 AlfredoCRSF crsf;
+
+//Variables:
+//uint8_t rx=0;
+int rssiPWM = 0;
+float RSSI_WORST=108.0; //dBm (negative)
+int rssi=RSSI_WORST;
+float RSSI_BEST=50.0;  //dBm (negative)
+float RSSI_PERCENT=0;
+
+unsigned long nextFailsafeTimeout = 0;
+int previousState = 0; //holds steering feedback position from last read.
+
+int throttle = 127;
+int steering = 0;
+
+
+//Objects:
+DRV8871 steeringDriver(steeringDriverPin1,steeringDriverPin2);
+
+void noTurn(){
+  steeringDriver.brake(); 
+}
+
+void turnLeft(){
+  steeringDriver.reverse();
+}
+
+void turnRight(){
+  steeringDriver.forward();
+}
+
+
 
 void setup()
 {
@@ -28,21 +59,28 @@ void setup()
   if (!Serial1) while (1) Serial.println("Invalid crsfSerial configuration");
 
   crsf.begin(Serial1);
+
+  /* PRESCALE DIVIDER FOR PWM FRQ ON PINS 9 and 10:
+  16'000'000 / 256 / 2 = 31250Hz 
+  0x01 1 31250
+  0x02 8 3906.25
+  0x03 64 488.28125
+  0x04 256 122.0703125
+  0x05 1024 30.517578125
+  */
+  TCCR1B = TCCR1B & 0b11111000 | 0x04; // <- Works.
+  //TCCR1B = TCCR1B & 0b11111000 | 0x05;
+  pinMode(steeringFeedbackPinA,INPUT_PULLUP);
+  pinMode(steeringFeedbackPinB,INPUT_PULLUP);
+  pinMode(steeringFeedbackPinC,INPUT_PULLUP);
+  pinMode(PWMmotorPin,OUTPUT);
+  pinMode(PWMrssiPin,OUTPUT);
+
+  Serial.println("Good to go!");
+  
 }
 
-float cap = 0;
 
-
-float RSSI_WORST=108.0; //dBm (negative)
-float RSSI_BEST=50.0;  //dBm (negative)
-float RSSI_PERCENT=0;
-uint16_t batteryVoltage;
-int throttle = 0;
-int rudder = 0;
-unsigned long lastTXtime=0;
-
-uint16_t lowest = 1000;
-uint16_t highest = 1000;
 
 
 void loop()
@@ -52,7 +90,7 @@ void loop()
 
   
 
-if(crsf.isLinkUp()){
+if(crsf.isLinkUp()){ //TODO: Check if failsafe is a thing?!
 
   const crsfLinkStatistics_t* stat_ptr = crsf.getLinkStatistics();
   uint8_t RSSI_1 = stat_ptr->uplink_RSSI_1;
@@ -60,28 +98,27 @@ if(crsf.isLinkUp()){
   uint8_t RSSI = min(RSSI_1,RSSI_2);
   RSSI_PERCENT = map(RSSI,RSSI_WORST,RSSI_BEST,0,100);
   RSSI_PERCENT = constrain(RSSI_PERCENT, 0, 100);
+  
+  nextFailsafeTimeout = millis() + failsafeTimeout;
+
+
+
+
   //uint8_t LQ = stat_ptr->uplink_Link_quality;
 
-  uint16_t rxThrottle = crsf.getChannel(3);
-  throttle = 0;
-  if (rxThrottle > 1600) throttle=1;
-  if (rxThrottle > 1900) throttle=2;
-  if (rxThrottle < 1400) throttle=-1;
-  if (rxThrottle < 1100) throttle=-2;
 
+  uint16_t rxThrottle = crsf.getChannel(3);
+  throttle = map(rxThrottle,CRSF_DIGITAL_CHANNEL_MIN,CRSF_DIGITAL_CHANNEL_MAX,0,255);
 
 
   
   uint16_t rxRudder = crsf.getChannel(4);
-  rudder = 0;
-  if (rxRudder > 1600) rudder=1;
-  if (rxRudder > 1900) rudder=2;
-  if (rxRudder < 1400) rudder=-1;
-  if (rxRudder < 1100) rudder=-2;
+  steering = map(rxRudder,CRSF_DIGITAL_CHANNEL_MIN,CRSF_DIGITAL_CHANNEL_MAX, 0, 6)-3; 
 
 
 
 
+/*
   int snsVin = analogRead(PIN_SNS_VIN);
  // float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
   if(millis()-lastTXtime>250){
@@ -89,30 +126,63 @@ if(crsf.isLinkUp()){
   sendRxBattery(batteryVoltage, 1.2, cap += 10, 50);
   lastTXtime=millis();
   }
-
+*/
 } //https://github.com/crsf-wg/crsf/wiki/CRSF_FRAMETYPE_LINK_STATISTICS
 else{
-   throttle=0;
-   rudder=0;
-RSSI_PERCENT=0.0;
+   throttle=STOP_PWM_VAL;
+   steering=0;
+   RSSI_PERCENT=0.0;
 }
+
+  //HANDLE RSSI:
+  rssiPWM = map(RSSI_PERCENT,0,100,0,255);
+  analogWrite(PWMrssiPin,rssiPWM);
+
+  //HANDLE THROTTLE:
+  int mapVal = map(throttle,0,255,32,62);
+  analogWrite(PWMmotorPin, mapVal); //TODO: Determine if deadzone is large enough
+
+  //HANDLE STEERING:
+  previousState = readSteeringFeedback();
+  int steeringDelta = steering-previousState; 
+  if(steeringDelta==0) noTurn(); //need to go nowhere  
+  else if(steeringDelta<0) turnLeft();
+  else if(steeringDelta>0) turnRight();
 
   Serial.print("Throttle:");
   Serial.print(throttle);
-  Serial.print(",Rudder:");
-  Serial.print(rudder);
+  Serial.print(",Steering:");
+  Serial.print(steering+3);
   Serial.print(",RSSI%:");
-  Serial.print(((float)RSSI_PERCENT)/10.0);
-  Serial.print(",batt:");
-  Serial.print(batteryVoltage);
+  Serial.print(((float)RSSI_PERCENT));
+  
 
   Serial.print(",MIN:");
-  Serial.print(-2);
+  Serial.print(0);
   Serial.print(",MAX:");
-  Serial.println(10.0); //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
+  Serial.println(100); //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
 
 
   delay(10);
+}
+
+
+int readSteeringFeedback(){ //negative is turning left!
+  int aState = digitalRead(steeringFeedbackPinA);
+  int bState = digitalRead(steeringFeedbackPinB);
+  int cState = digitalRead(steeringFeedbackPinC);
+/*
+  Serial.print(aState);
+  Serial.print(" "); 
+  Serial.print(bState);
+  Serial.print(" "); 
+  Serial.println(cState);
+*/
+  if( aState & bState & cState ) return previousState; //non-discrete in-between-state with all pins high - Keep moving the steering.
+  //Now we know the feedback is in a discrete state:
+  if( bState ) return 2-cState+aState; //Steering feedback is positive (1,2,3)
+  else if ( cState & !aState ) return 0; // A=0, B=0; C=1
+  else return -3+aState+cState; //-3,-2,-1
 }
 
 static void sendRxBattery(float voltage, float current, float capacity, float remaining)
