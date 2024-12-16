@@ -66,6 +66,13 @@ void setup()
 
 }
 
+/*
+unsigned long fakeTimer=0;
+int fakeThrottleInput = 0;
+int fakeSpeedFactor = 1;
+int fakeSteeringInput = 3;
+*/
+
 void loop()
 {
     uint16_t receiverBatteryVoltage=0;
@@ -87,13 +94,32 @@ void loop()
 
   int8_t speedFactor = checkPaddles(); //1, 2 or 3
   int8_t throttleInput = getThrottle(); //-3 to 3
-  int8_t steeringInput = getSteering(); //-3 to 3
-    
+  int8_t steeringInput = getSteering()*-1; //-3 to 3
+/*
+  if(millis()-fakeTimer>250) {
+    fakeThrottleInput++;
+    fakeSteeringInput--;
+    fakeTimer=millis();
+    if (fakeThrottleInput>3) {
+      fakeThrottleInput=-3;
+      fakeSpeedFactor++;
+      if(fakeSpeedFactor>3) fakeSpeedFactor=1;
+    }
+    if(fakeSteeringInput<-3) fakeSteeringInput=3;
+
+    }  
+  throttleInput=fakeThrottleInput;
+  speedFactor=fakeSpeedFactor;
+  steeringInput=fakeSteeringInput;
+*/
+  
 
                      //    1-3              -3-3
   int throttleDiff = speedFactor * 91 * throttleInput; // 91 = (CRSF_CHANNEL_VALUE_SPAN/2)/(3*3)
   
   int throttleVal = CRSF_CHANNEL_VALUE_MID + throttleDiff;
+
+  //throttleVal = map(throttleInput,-3,3,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX)
 
   int rudderDiff = 273*steeringInput; //273 = ((CRSF_CHANNEL_VALUE_SPAN/2)/3)
   int rudderVal = CRSF_CHANNEL_VALUE_MID + rudderDiff;
@@ -108,7 +134,7 @@ void loop()
 /*
     Serial.print("speedFactor:");
     Serial.print(speedFactor);
-    */
+ */   
     Serial.print("throttleInput:");
     Serial.print(throttleInput);
 /*
@@ -116,12 +142,19 @@ void loop()
     Serial.print(throttleDiff);
     Serial.print("throttleVal:");
     Serial.print(throttleVal);
-
   */  
+    Serial.print("THROTTLE:");
+    Serial.print(rcChannels[THROTTLE]);
+    
+
+  
     Serial.print("steeringInput:");
     Serial.print(steeringInput);
-    //Serial.print(",STEERING:");
-    //Serial.print(rcChannels[RUDDER]);
+    
+    Serial.print(",STEERING:");
+    Serial.print(rcChannels[RUDDER]);
+    
+    /*
     Serial.print(",BATTERY:");
     Serial.print(receiverBatteryVoltage/10);
     Serial.print(",TELEMETRY_RSSI%/10:");
@@ -129,9 +162,9 @@ void loop()
     Serial.print(",MIN:");
     Serial.print(-3);
     Serial.print(",MAX:");
-    Serial.println(9);
-  
-
+    Serial.print(9);
+  */
+    Serial.println();
 
     if (currentMicros > crsfTime) {
 

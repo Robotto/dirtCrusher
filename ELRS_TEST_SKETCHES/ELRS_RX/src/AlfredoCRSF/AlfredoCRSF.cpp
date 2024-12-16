@@ -156,8 +156,8 @@ void AlfredoCRSF::packetChannelsPacked(const crsf_header_t *p)
     _channels[14] = ch->ch14;
     _channels[15] = ch->ch15;
 
-    for (unsigned int i=0; i<CRSF_NUM_CHANNELS; ++i)
-        _channels[i] = map(_channels[i], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, 1000, 2000);
+    //for (unsigned int i=0; i<CRSF_NUM_CHANNELS; ++i)
+    //    _channels[i] = map(_channels[i], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, 1000, 2000);
 
     _linkIsUp = true;
     _lastChannelsPacket = millis();

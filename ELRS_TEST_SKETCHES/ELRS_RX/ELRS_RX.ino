@@ -34,7 +34,8 @@ const int throttlePWM_MIN = 32;
 const int throttlePWM_SPAN = (throttlePWM_MAX - throttlePWM_MIN);
 const int throttlePWM_MID = throttlePWM_MIN + throttlePWM_SPAN / 2;
 
-const int CRSF_DEADZONE = 10;
+const int THROTTLE_DEADZONE = 10;
+const int RUDDER_DEADZONE = 250;
 
 int throttlePWM = throttlePWM_MID;
 
@@ -143,13 +144,13 @@ void loop() {
   analogWrite(PWMrssiPin, rssiPWM);
 
   //HANDLE THROTTLE:
-  if (abs(rxThrottle - CRSF_CHANNEL_VALUE_MID) < CRSF_DEADZONE) rxThrottle = CRSF_CHANNEL_VALUE_MID;
+  if (abs(rxThrottle - CRSF_CHANNEL_VALUE_MID) < THROTTLE_DEADZONE) rxThrottle = CRSF_CHANNEL_VALUE_MID;
   throttlePWM = map(rxThrottle, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, throttlePWM_MIN, throttlePWM_MAX);
   analogWrite(PWMmotorPin, throttlePWM);  //TODO: Determine if deadzone is large enough
 
 
   //HANDLE STEERING:
-  if (abs(rxRudder - CRSF_CHANNEL_VALUE_MID) < CRSF_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
+  if (abs(rxRudder - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
   steering = map(rxRudder, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, -3, 3);
   previousState = readSteeringFeedback();
   int steeringDelta = steering - previousState;
@@ -157,18 +158,21 @@ void loop() {
   if (steeringDelta == 0) noTurn();  //need to go nowhere
   else if (steeringDelta < 0) turnLeft();
   else if (steeringDelta > 0) turnRight();
-  /*
+  
 
+  
   Serial.print("rxThrottle:");
   Serial.print(rxThrottle);
-*/
+
   Serial.print("Throttle(PWM):");
   Serial.print(throttlePWM);
 
   Serial.print("rxRudder:");
   Serial.print(rxRudder);
+  
   Serial.print(",Steering:");
   Serial.print(steering);
+  
   Serial.print(",RSSI%:");
   Serial.print(((float)RSSI_PERCENT));
 
@@ -176,9 +180,9 @@ void loop() {
   Serial.print(",MIN:");
   Serial.print(0);
   Serial.print(",MAX:");
-  Serial.println(100);  //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
+  Serial.print(CRSF_CHANNEL_VALUE_MAX);  //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
 
-
+  Serial.println();
   delay(10);
 }
 
