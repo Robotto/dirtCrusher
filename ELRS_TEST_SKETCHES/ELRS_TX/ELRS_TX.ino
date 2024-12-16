@@ -76,8 +76,8 @@ void loop()
     RSSI_PERCENT=0;
     if(crsfClass.linkUP())
 {
-      //const crsf_sensor_battery_t* batt = crsfClass.getBatt();
-      //receiverBatteryVoltage = batt->voltage;
+      const crsf_sensor_battery_t* batt = crsfClass.getBatt();
+      receiverBatteryVoltage = batt->voltage;
       const crsfLinkStatistics_t* stat_ptr = crsfClass.getLinkStatistics();
       uint8_t RSSI = stat_ptr->downlink_RSSI;
       RSSI_PERCENT = map(RSSI,RSSI_WORST,RSSI_BEST,0,100);
@@ -85,48 +85,51 @@ void loop()
 }   
 
 
-  int8_t speedVal = checkPaddles(); //1, 2 or 3
-  int8_t throttleVal = getThrottle(); //-3 to 3
-  int8_t steeringVal = getSteering(); //-3 to 3 -> 0 to 6
+  int8_t speedFactor = checkPaddles(); //1, 2 or 3
+  int8_t throttleInput = getThrottle(); //-3 to 3
+  int8_t steeringInput = getSteering(); //-3 to 3
     
-  const unsigned int STOP_PWM_VAL = 127;
 
                      //    1-3              -3-3
-  int throttlePWMdiff = speedVal * 14 * throttleVal; // 127/(3*3) = 14.111
-                    //  127             -127 to 127
-  int throttlePWMval = STOP_PWM_VAL + throttlePWMdiff; //0-255
+  int throttleDiff = speedFactor * 91 * throttleInput; // 91 = (CRSF_CHANNEL_VALUE_SPAN/2)/(3*3)
+  
+  int throttleVal = CRSF_CHANNEL_VALUE_MID + throttleDiff;
 
-
+  int rudderDiff = 273*steeringInput; //273 = ((CRSF_CHANNEL_VALUE_SPAN/2)/3)
+  int rudderVal = CRSF_CHANNEL_VALUE_MID + rudderDiff;
   //TEST waves:
     //Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
     //Rudder_value = (uint16_t)(((1.0+cos((float)millis()/1000.0))*0.5)*ADC_MAX); 
 
     //rcChannels[AILERON]   = 0; 
-    rcChannels[THROTTLE]  = (int16_t)map(throttlePWMval, 0, 255, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
-    rcChannels[RUDDER]    = (int16_t)map(steeringVal,   3, -3, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+    rcChannels[THROTTLE]  = constrain(throttleVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
+    rcChannels[RUDDER]    = constrain(rudderVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
 /*
-    Serial.print("speedVal:");
-    Serial.print(speedVal);
+    Serial.print("speedFactor:");
+    Serial.print(speedFactor);
+    */
+    Serial.print("throttleInput:");
+    Serial.print(throttleInput);
+/*
+    Serial.print("throttleDiff:");
+    Serial.print(throttleDiff);
     Serial.print("throttleVal:");
     Serial.print(throttleVal);
-    Serial.print("throttlePWMval:");
-    Serial.print(throttlePWMval);
-    Serial.print("steeringVal:");
-    Serial.print(steeringVal);
+
   */  
-    Serial.print("THROTTLE:");
-    Serial.print(rcChannels[THROTTLE]);
-    Serial.print(",RUDDER:");
-    Serial.print(rcChannels[RUDDER]);
+    Serial.print("steeringInput:");
+    Serial.print(steeringInput);
+    //Serial.print(",STEERING:");
+    //Serial.print(rcChannels[RUDDER]);
     Serial.print(",BATTERY:");
-    Serial.print(receiverBatteryVoltage*10);
-    Serial.print(",TELEMETRY_RSSI%:");
-    Serial.print(RSSI_PERCENT*10);
+    Serial.print(receiverBatteryVoltage/10);
+    Serial.print(",TELEMETRY_RSSI%/10:");
+    Serial.print(RSSI_PERCENT/10);
     Serial.print(",MIN:");
-    Serial.print(0);
+    Serial.print(-3);
     Serial.print(",MAX:");
-    Serial.println(CRSF_CHANNEL_VALUE_MAX);
+    Serial.println(9);
   
 
 
