@@ -133,7 +133,7 @@ private:
     uint8_t _rxBuf[CRSF_MAX_PACKET_LEN+3];
     uint8_t _rxBufPos;
     uint32_t _lastReceive;
-    uint32_t _lastChannelsPacket;
+    uint32_t _lastTelemetryPacket;
     bool _linkIsUp;
     crsfLinkStatistics_t _linkStatistics;
     crsf_sensor_battery_t _batt;

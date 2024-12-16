@@ -68,7 +68,7 @@ void setup()
 
 void loop()
 {
-    uint16_t receiverBatteryVoltage;
+    uint16_t receiverBatteryVoltage=0;
 
     uint32_t currentMicros = micros();
     crsfClass.update();
@@ -76,8 +76,8 @@ void loop()
     RSSI_PERCENT=0;
     if(crsfClass.linkUP())
 {
-      const crsf_sensor_battery_t* batt = crsfClass.getBatt();
-      receiverBatteryVoltage = batt->voltage;
+      //const crsf_sensor_battery_t* batt = crsfClass.getBatt();
+      //receiverBatteryVoltage = batt->voltage;
       const crsfLinkStatistics_t* stat_ptr = crsfClass.getLinkStatistics();
       uint8_t RSSI = stat_ptr->downlink_RSSI;
       RSSI_PERCENT = map(RSSI,RSSI_WORST,RSSI_BEST,0,100);
@@ -85,14 +85,14 @@ void loop()
 }   
 
 
-  uint8_t speedVal = checkPaddles(); //1, 2 or 3
+  int8_t speedVal = checkPaddles(); //1, 2 or 3
   int8_t throttleVal = getThrottle(); //-3 to 3
-  uint8_t steeringVal = 3 + getSteering(); //-3 to 3 -> 0 to 6
+  int8_t steeringVal = getSteering(); //-3 to 3 -> 0 to 6
     
-  const unsigned int STOP_PWM_VAL = 1500;
+  const unsigned int STOP_PWM_VAL = 127;
 
                      //    1-3              -3-3
-  int throttlePWMdiff = speedVal * 14 * throttleVal; // 127/(3*3) = 55.5555
+  int throttlePWMdiff = speedVal * 14 * throttleVal; // 127/(3*3) = 14.111
                     //  127             -127 to 127
   int throttlePWMval = STOP_PWM_VAL + throttlePWMdiff; //0-255
 
@@ -103,9 +103,18 @@ void loop()
 
     //rcChannels[AILERON]   = 0; 
     rcChannels[THROTTLE]  = map(throttlePWMval, 0, 255, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
-    rcChannels[RUDDER]    = map(steeringVal,   6, 0, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
+    rcChannels[RUDDER]    = map(steeringVal,   3, -3, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
 
 
+    Serial.print("speedVal:");
+    Serial.print(speedVal);
+    Serial.print("throttleVal:");
+    Serial.print(throttleVal);
+    Serial.print("throttlePWMval:");
+    Serial.print(throttlePWMval);
+    Serial.print("steeringVal:");
+    Serial.print(steeringVal);
+    
     Serial.print("THROTTLE:");
     Serial.print(rcChannels[THROTTLE]);
     Serial.print(",RUDDER:");

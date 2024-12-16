@@ -183,6 +183,7 @@ void CRSF::handleByteReceived()
                 if (crc == inCrc)
                 {
                     processTelemetry(len);
+
                     shiftRxBuffer(len + 2);
                     reprocess = true;
                 }
@@ -206,7 +207,7 @@ void CRSF::checkPacketTimeout()
 
 void CRSF::checkLinkDown()
 {
-    if (_linkIsUp && millis() - _lastChannelsPacket > CRSF_FAILSAFE_STAGE1_MS)
+    if (_linkIsUp && millis() - _lastTelemetryPacket > CRSF_FAILSAFE_STAGE1_MS)
     {
         _linkIsUp = false;
     }
@@ -226,8 +227,12 @@ void CRSF::processTelemetry(uint8_t len)
 //    {
   
 switch (hdr->type) {
+      case CRSF_ADDRESS_FLIGHT_CONTROLLER:
+          _linkIsUp = true;
+          _lastTelemetryPacket=millis();
+          break;
       case CRSF_FRAMETYPE_BATTERY_SENSOR:
-          _lastChannelsPacket=millis();
+          _lastTelemetryPacket=millis();
           _linkIsUp = true;
           crsf_sensor_battery_t *batt = (crsf_sensor_battery_t *)hdr->data;
           _batt.voltage = be16toh(batt->voltage);

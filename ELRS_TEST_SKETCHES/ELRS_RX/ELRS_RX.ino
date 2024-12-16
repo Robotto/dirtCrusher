@@ -25,11 +25,12 @@ float RSSI_WORST=108.0; //dBm (negative)
 int rssi=RSSI_WORST;
 float RSSI_BEST=50.0;  //dBm (negative)
 float RSSI_PERCENT=0;
+unsigned long lastTXtime=0;
 
 unsigned long nextFailsafeTimeout = 0;
 int previousState = 0; //holds steering feedback position from last read.
 
-int throttle = 127;
+int throttle = STOP_PWM_VAL;
 int steering = 0;
 
 
@@ -81,10 +82,10 @@ void setup()
 }
 
 
-
-
 void loop()
 { 
+  int rxThrottle=0;
+  int rxRudder=0;
   // Must call crsf.update() in loop() to process data
   crsf.update();
 
@@ -107,26 +108,26 @@ if(crsf.isLinkUp()){ //TODO: Check if failsafe is a thing?!
   //uint8_t LQ = stat_ptr->uplink_Link_quality;
 
 
-  uint16_t rxThrottle = crsf.getChannel(3);
+  rxThrottle = crsf.getChannel(3); //INDEXED BY 1 YOU PIECE OF SHIIIIT!
   throttle = map(rxThrottle,CRSF_DIGITAL_CHANNEL_MIN,CRSF_DIGITAL_CHANNEL_MAX,0,255);
 
 
   
-  uint16_t rxRudder = crsf.getChannel(4);
-  steering = map(rxRudder,CRSF_DIGITAL_CHANNEL_MIN,CRSF_DIGITAL_CHANNEL_MAX, 0, 6)-3; 
+  rxRudder = crsf.getChannel(4);
+  steering = map(rxRudder,CRSF_DIGITAL_CHANNEL_MIN,CRSF_DIGITAL_CHANNEL_MAX, -3, 3); 
 
 
 
 
-/*
-  int snsVin = analogRead(PIN_SNS_VIN);
+
+  //int snsVin = analogRead(PIN_SNS_VIN);
  // float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
   if(millis()-lastTXtime>250){
-  batteryVoltage=(uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*10.0);
-  sendRxBattery(batteryVoltage, 1.2, cap += 10, 50);
+  uint16_t batteryVoltage=(uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*10.0);
+  sendRxBattery(batteryVoltage, 1.2, 0, 50);
   lastTXtime=millis();
   }
-*/
+
 } //https://github.com/crsf-wg/crsf/wiki/CRSF_FRAMETYPE_LINK_STATISTICS
 else{
    throttle=STOP_PWM_VAL;
@@ -141,18 +142,24 @@ else{
   //HANDLE THROTTLE:
   int mapVal = map(throttle,0,255,32,62);
   analogWrite(PWMmotorPin, mapVal); //TODO: Determine if deadzone is large enough
+  int throttleStickVal = map(throttle,0,255,-3,3);
 
   //HANDLE STEERING:
   previousState = readSteeringFeedback();
   int steeringDelta = steering-previousState; 
+  steeringDelta == 0; ///////////////////////////////////TODO: THIS IS FOR TESTING!!
   if(steeringDelta==0) noTurn(); //need to go nowhere  
   else if(steeringDelta<0) turnLeft();
   else if(steeringDelta>0) turnRight();
 
+  Serial.print("rxThrottle:");
+  Serial.print(rxThrottle);
   Serial.print("Throttle:");
   Serial.print(throttle);
+  Serial.print("throttleStickVal:");
+  Serial.print(throttleStickVal);
   Serial.print(",Steering:");
-  Serial.print(steering+3);
+  Serial.print(steering);
   Serial.print(",RSSI%:");
   Serial.print(((float)RSSI_PERCENT));
   
