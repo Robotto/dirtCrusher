@@ -29,9 +29,13 @@
 // #define ADDR_MODULE             0xEE  //  Crossfire transmitter
 #define TYPE_CHANNELS           0x16
 
-// Define AUX channel input limite
-#define CRSF_DIGITAL_CHANNEL_MIN 172
-#define CRSF_DIGITAL_CHANNEL_MAX 1811
+#define CRSF_CHANNEL_VALUE_MIN  172
+#define CRSF_CHANNEL_VALUE_1000 191
+#define CRSF_CHANNEL_VALUE_MID  992
+#define CRSF_CHANNEL_VALUE_2000 1792
+#define CRSF_CHANNEL_VALUE_MAX  1811
+#define CRSF_CHANNEL_VALUE_SPAN (CRSF_CHANNEL_VALUE_MAX - CRSF_CHANNEL_VALUE_MIN)
+
 
 // internal crsf variables
 #define CRSF_TIME_NEEDED_PER_FRAME_US   1100 // 700 ms + 400 ms for potential ad-hoc request

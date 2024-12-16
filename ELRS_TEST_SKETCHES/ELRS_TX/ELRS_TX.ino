@@ -46,7 +46,7 @@ void setup()
 {
     // inialize rc data
     for (uint8_t i = 0; i < CRSF_MAX_CHANNEL; i++) {
-        rcChannels[i] = CRSF_DIGITAL_CHANNEL_MIN;
+        rcChannels[i] = CRSF_CHANNEL_VALUE_MIN;
     }
 
   //Controller pins
@@ -102,10 +102,10 @@ void loop()
     //Rudder_value = (uint16_t)(((1.0+cos((float)millis()/1000.0))*0.5)*ADC_MAX); 
 
     //rcChannels[AILERON]   = 0; 
-    rcChannels[THROTTLE]  = map(throttlePWMval, 0, 255, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
-    rcChannels[RUDDER]    = map(steeringVal,   3, -3, CRSF_DIGITAL_CHANNEL_MIN, CRSF_DIGITAL_CHANNEL_MAX);
+    rcChannels[THROTTLE]  = (int16_t)map(throttlePWMval, 0, 255, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+    rcChannels[RUDDER]    = (int16_t)map(steeringVal,   3, -3, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
 
-
+/*
     Serial.print("speedVal:");
     Serial.print(speedVal);
     Serial.print("throttleVal:");
@@ -114,7 +114,7 @@ void loop()
     Serial.print(throttlePWMval);
     Serial.print("steeringVal:");
     Serial.print(steeringVal);
-    
+  */  
     Serial.print("THROTTLE:");
     Serial.print(rcChannels[THROTTLE]);
     Serial.print(",RUDDER:");
@@ -126,7 +126,7 @@ void loop()
     Serial.print(",MIN:");
     Serial.print(0);
     Serial.print(",MAX:");
-    Serial.println(CRSF_DIGITAL_CHANNEL_MAX);
+    Serial.println(CRSF_CHANNEL_VALUE_MAX);
   
 
 

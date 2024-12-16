@@ -84,8 +84,8 @@ void setup()
 
 void loop()
 { 
-  int rxThrottle=0;
-  int rxRudder=0;
+  int16_t rxThrottle=0;
+  int16_t rxRudder=0;
   // Must call crsf.update() in loop() to process data
   crsf.update();
 
@@ -109,12 +109,14 @@ if(crsf.isLinkUp()){ //TODO: Check if failsafe is a thing?!
 
 
   rxThrottle = crsf.getChannel(3); //INDEXED BY 1 YOU PIECE OF SHIIIIT!
-  throttle = map(rxThrottle,CRSF_DIGITAL_CHANNEL_MIN,CRSF_DIGITAL_CHANNEL_MAX,0,255);
-
+  throttle = 128;
+  if(abs(rxThrottle-CRSF_CHANNEL_VALUE_MID) > 10) {
+  throttle = map(rxThrottle,CRSF_CHANNEL_VALUE_1000,CRSF_CHANNEL_VALUE_2000,0,255);
+  }
 
   
   rxRudder = crsf.getChannel(4);
-  steering = map(rxRudder,CRSF_DIGITAL_CHANNEL_MIN,CRSF_DIGITAL_CHANNEL_MAX, -3, 3); 
+  steering = map(rxRudder,CRSF_CHANNEL_VALUE_1000,CRSF_CHANNEL_VALUE_2000, -3, 3); 
 
 
 
