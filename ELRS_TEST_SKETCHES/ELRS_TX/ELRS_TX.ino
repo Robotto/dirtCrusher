@@ -8,6 +8,8 @@ int Rudder_value = 0;
 
 int loopCount = 0; // for ELRS seeting
 
+int VbattPin=A2;
+
 
 //Dirtcrusher remote controller pins
 const int xPin = 8; //ORANGE 
@@ -18,9 +20,6 @@ const int steering_aPin = 7; //yellow
 const int steering_bPin = 4; //white
 const int fasterPaddlePin = 9; //pink 
 const int slowerPaddlePin = 6; //blue
-
-
-float batteryVoltage;
 
 int currentPktRate = 0;
 int currentPower = 0;
@@ -95,6 +94,7 @@ void loop()
   int8_t speedFactor = checkPaddles(); //1, 2 or 3
   int8_t throttleInput = getThrottle(); //-3 to 3
   int8_t steeringInput = getSteering()*-1; //-3 to 3
+  int8_t batteryPercent = readBatt();
 /*
   if(millis()-fakeTimer>250) {
     fakeThrottleInput++;
@@ -123,11 +123,13 @@ void loop()
 
   int rudderDiff = 273*steeringInput; //273 = ((CRSF_CHANNEL_VALUE_SPAN/2)/3)
   int rudderVal = CRSF_CHANNEL_VALUE_MID + rudderDiff;
+
+  int batteryChannel = map(batteryPercent,0,100,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
   //TEST waves:
     //Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
     //Rudder_value = (uint16_t)(((1.0+cos((float)millis()/1000.0))*0.5)*ADC_MAX); 
 
-    //rcChannels[AILERON]   = 0; 
+    rcChannels[AILERON]   = constrain(batteryChannel,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX); 
     rcChannels[THROTTLE]  = constrain(throttleVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
     rcChannels[RUDDER]    = constrain(rudderVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
@@ -267,4 +269,25 @@ int readStick(int X, int Y, int A, int B) {
   else if ( !bState ) return -3; //A=high, B=low
 
   return 0;
+}
+
+//Voltage divider: None.
+#define V_BATTMAX 4.2
+#define V_BATTMIN 3.0
+#define V_ADCMAX 5.0
+#define ADCMAX 1023.0
+#define V_DIVIDER_MAX_OUT 4.2
+#define DIVIDER_FACTOR 1.0
+#define V_CALIBATED_OFFSET 0.09
+#define N_MEASUREMENTS 16
+
+uint8_t readBatt(){
+  //Do a bunch of ADC measurements and convert them to average Vbatt, append Vbatt to report
+  unsigned long ADCSum = 0;
+  for (int i=0; i<N_MEASUREMENTS; i++) ADCSum+=analogRead(VbattPin); 
+  unsigned int ADCavg = ADCSum/N_MEASUREMENTS;
+  float vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
+          //Vbatt minimum = 3.0, VbattMaximum = 4.2
+  //Serial.println(vBatt);
+  return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }

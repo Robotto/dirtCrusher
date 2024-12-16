@@ -13,3 +13,4 @@ RX code snatched from: https://github.com/AlfredoSystems/AlfredoCRSF
 
 Python test script snatched from: https://github.com/AlessioMorale/crsf_parser
 
+Have a good look at: https://github.com/crsf-wg/crsf/wiki

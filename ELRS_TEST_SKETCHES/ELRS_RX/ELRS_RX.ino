@@ -160,27 +160,27 @@ void loop() {
   else if (steeringDelta > 0) turnRight();
   
 
-  
+  /*
   Serial.print("rxThrottle:");
   Serial.print(rxThrottle);
-
+*/
   Serial.print("Throttle(PWM):");
-  Serial.print(throttlePWM);
-
+  Serial.print((((float)throttlePWM)-32.0)/30.0);
+/*
   Serial.print("rxRudder:");
   Serial.print(rxRudder);
-  
+  */
   Serial.print(",Steering:");
-  Serial.print(steering);
+  Serial.print((float)(steering+3.0)/6.0);
   
-  Serial.print(",RSSI%:");
-  Serial.print(((float)RSSI_PERCENT));
+  Serial.print(",RSSI:");
+  Serial.print(((float)RSSI_PERCENT/100));
 
 
   Serial.print(",MIN:");
   Serial.print(0);
   Serial.print(",MAX:");
-  Serial.print(CRSF_CHANNEL_VALUE_MAX);  //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
+  Serial.print(1);  //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
 
   Serial.println();
   delay(10);

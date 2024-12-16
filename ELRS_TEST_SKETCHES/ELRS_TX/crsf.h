@@ -20,6 +20,8 @@
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+//https://github.com/crsf-wg/crsf/wiki
+
 // Basic setup
 #define CRSF_MAX_CHANNEL        16
 #define CRSF_FRAME_SIZE_MAX     64
