@@ -133,40 +133,19 @@ void loop()
     rcChannels[THROTTLE]  = constrain(throttleVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
     rcChannels[RUDDER]    = constrain(rudderVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
-/*
-    Serial.print("speedFactor:");
-    Serial.print(speedFactor);
- */   
-    Serial.print("throttleInput:");
-    Serial.print(throttleInput);
-/*
-    Serial.print("throttleDiff:");
-    Serial.print(throttleDiff);
-    Serial.print("throttleVal:");
-    Serial.print(throttleVal);
-  */  
-    Serial.print("THROTTLE:");
-    Serial.print(rcChannels[THROTTLE]);
-    
-
-  
-    Serial.print("steeringInput:");
-    Serial.print(steeringInput);
-    
-    Serial.print(",STEERING:");
-    Serial.print(rcChannels[RUDDER]);
-    
-    /*
-    Serial.print(",BATTERY:");
-    Serial.print(receiverBatteryVoltage/10);
-    Serial.print(",TELEMETRY_RSSI%/10:");
-    Serial.print(RSSI_PERCENT/10);
-    Serial.print(",MIN:");
-    Serial.print(-3);
-    Serial.print(",MAX:");
-    Serial.print(9);
-  */
-    Serial.println();
+    //Serial.print("speedFactor:"); Serial.print(speedFactor);
+    //Serial.print("throttleInput:"); Serial.print(throttleInput);
+    //Serial.print("throttleDiff:"); Serial.print(throttleDiff);
+    //Serial.print("throttleVal:"); Serial.print(throttleVal);
+    //Serial.print("THROTTLE:"); Serial.print(rcChannels[THROTTLE]);
+    //Serial.print("steeringInput:"); Serial.print(steeringInput);
+    //Serial.print(",STEERING:"); Serial.print(rcChannels[RUDDER]);
+    //Serial.print(",RXbatt:"); Serial.print(receiverBatteryVoltage/10);
+    //Serial.print(",TXbatt:"); Serial.print((float)batteryPercent/100.0);
+    //Serial.print(",TELEMETRY_RSSI%/10:"); Serial.print(RSSI_PERCENT/10);
+    //Serial.print(",MIN:"); Serial.print(-3);
+    //Serial.print(",MAX:"); Serial.print(9);
+    //Serial.println();
 
     if (currentMicros > crsfTime) {
 
@@ -227,23 +206,32 @@ uint8_t checkPaddles()  {
   static uint8_t speed = 1;
   static bool lastState_fasterPaddle = HIGH;
   static bool lastState_slowerPaddle = HIGH;
+  static uint8_t slowerPaddleDeBounceCounter=0;
+  static uint8_t fasterPaddleDeBounceCounter=0;
 
-  if(!digitalRead(fasterPaddlePin) || !digitalRead(slowerPaddlePin) ) delay(5);
+  //Paddles need to have had a stable LOW reading for 20 consecutive calls to checkPaddles (about 20ms)
+  if(!digitalRead(fasterPaddlePin)) fasterPaddleDeBounceCounter++;
+  else fasterPaddleDeBounceCounter=0;
+  if(!digitalRead(slowerPaddlePin)) slowerPaddleDeBounceCounter++;
+  else slowerPaddleDeBounceCounter=0;
 
-  if(!digitalRead(fasterPaddlePin) && lastState_fasterPaddle) { //paddle is pressed 
+  if(fasterPaddleDeBounceCounter+slowerPaddleDeBounceCounter>0) delay(1); //
+
+  if(fasterPaddleDeBounceCounter>20 && lastState_fasterPaddle) { //paddle has been pressed for more than 20mS
     lastState_fasterPaddle = LOW; //set last state to pressed
     speed++;
   }
 
-  if(!digitalRead(slowerPaddlePin) && lastState_slowerPaddle) { //paddle is pressed 
+  if(slowerPaddleDeBounceCounter>20 && lastState_slowerPaddle) { //paddle has been pressed for more than 20mS
     lastState_slowerPaddle = LOW; //set last state to pressed
     speed--;
   }
+
   if(speed>3) speed=3;
   else if(speed<1) speed=1;
 
-  if(digitalRead(fasterPaddlePin)) lastState_fasterPaddle = HIGH; //reset last state  
-  if(digitalRead(slowerPaddlePin)) lastState_slowerPaddle = HIGH; //reset last state
+  if(digitalRead(fasterPaddlePin) && !lastState_fasterPaddle) lastState_fasterPaddle = HIGH; //reset last state  
+  if(digitalRead(slowerPaddlePin) && !lastState_slowerPaddle) lastState_slowerPaddle = HIGH; //reset last state
 
   return speed;
 }
@@ -279,7 +267,7 @@ int readStick(int X, int Y, int A, int B) {
 #define V_DIVIDER_MAX_OUT 4.2
 #define DIVIDER_FACTOR 1.0
 #define V_CALIBATED_OFFSET 0.09
-#define N_MEASUREMENTS 16
+#define N_MEASUREMENTS 32
 
 uint8_t readBatt(){
   //Do a bunch of ADC measurements and convert them to average Vbatt, append Vbatt to report
