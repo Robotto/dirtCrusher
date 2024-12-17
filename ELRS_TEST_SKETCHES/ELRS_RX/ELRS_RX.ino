@@ -88,6 +88,8 @@ void setup() {
   Serial.println("Good to go!");
 }
 
+int txBatt;
+int txBatt_previous;
 
 void loop() {
   int16_t rxThrottle = CRSF_CHANNEL_VALUE_MID;
@@ -120,6 +122,13 @@ void loop() {
 
     rxRudder = crsf.getChannel(4);
 
+    txBatt = map(crsf.getChannel(1),CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,100);
+    
+    if (abs(txBatt-txBatt_previous)<4) txBatt=txBatt_previous; //if battery percentage has moved less than 5%, we stay on previous value
+    
+    txBatt_previous=txBatt;
+
+
 
 
 
@@ -137,6 +146,7 @@ void loop() {
     throttlePWM = throttlePWM_MID;
     steering = 0;
     RSSI_PERCENT = 0.0;
+    txBatt=0;
   }
 
   //HANDLE RSSI:
@@ -151,30 +161,52 @@ void loop() {
 
   //HANDLE STEERING:
   if (abs(rxRudder - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
-  steering = map(rxRudder, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, -3, 3);
+  //steering = map(rxRudder, CRSF_CHANNEL_VALUE_MIN+2, CRSF_CHANNEL_VALUE_MAX-2, -3, 3); //for some reason the mapping was a bit off...
+  switch (rxRudder){
+    case 174:
+      steering = -3;
+      break;
+    case 446:
+      steering = -2;
+      break;
+    case 718:
+      steering = -1;
+      break;
+    case  992: //CRSF_CHANNEL_VALUE_MID
+      steering = 0;
+      break;
+    case 1265:
+      steering = 1;
+      break;
+    case 1539:
+      steering = 2;
+      break;
+    case 1811:
+      steering = 3;
+      break;  
+    default:
+      steering=0;
+      break;
+  }
   previousState = readSteeringFeedback();
   int steeringDelta = steering - previousState;
-  steeringDelta == 0;                ///////////////////////////////////TODO: THIS IS FOR TESTING!!
+  //steeringDelta == 0;                ///////////////////////////////////TODO: THIS IS FOR TESTING!!
   if (steeringDelta == 0) noTurn();  //need to go nowhere
   else if (steeringDelta < 0) turnLeft();
   else if (steeringDelta > 0) turnRight();
   
 
-  /*
-  Serial.print("rxThrottle:");
-  Serial.print(rxThrottle);
-*/
-  Serial.print("Throttle(PWM):");
-  Serial.print((((float)throttlePWM)-32.0)/30.0);
-/*
-  Serial.print("rxRudder:");
-  Serial.print(rxRudder);
-  */
-  Serial.print(",Steering:");
-  Serial.print((float)(steering+3.0)/6.0);
   
-  Serial.print(",RSSI:");
-  Serial.print(((float)RSSI_PERCENT/100));
+  //Serial.print("rxThrottle:"); Serial.print(rxThrottle);
+  Serial.print("Throttle(PWM):"); Serial.print((((float)throttlePWM)-32.0)/30.0);
+
+  //Serial.print("rxRudder:"); Serial.print(rxRudder);
+  
+  Serial.print(",Steering:"); Serial.print((float)(steering+3.0)/6.0);
+  
+  Serial.print(",RSSI:"); Serial.print(((float)RSSI_PERCENT/100));
+
+  Serial.print(",TXBATT%:"); Serial.print(((float)txBatt)/100);
 
 
   Serial.print(",MIN:");
