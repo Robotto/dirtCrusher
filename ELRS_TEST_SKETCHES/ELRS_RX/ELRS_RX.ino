@@ -247,3 +247,24 @@ static void sendRxBattery(float voltage, float current, float capacity, float re
   crsfBatt.remaining = (uint8_t)(remaining);               //percent
   crsf.queuePacket(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BATTERY_SENSOR, &crsfBatt, sizeof(crsfBatt));
 }
+
+//Voltage divider: None.
+#define V_BATTMAX 8.4
+#define V_BATTMIN 3.5
+#define V_ADCMAX 5.0
+#define ADCMAX 1023.0
+#define V_DIVIDER_MAX_OUT 4.2
+#define DIVIDER_FACTOR 2.0
+#define V_CALIBATED_OFFSET 0.09
+#define N_MEASUREMENTS 32
+
+uint8_t readBatt(){
+  //Do a bunch of ADC measurements and convert them to average Vbatt, append Vbatt to report
+  unsigned long ADCSum = 0;
+  for (int i=0; i<N_MEASUREMENTS; i++) ADCSum+=analogRead(VbattPin); 
+  unsigned int ADCavg = ADCSum/N_MEASUREMENTS;
+  float vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
+          //Vbatt minimum = 3.0, VbattMaximum = 4.2
+  //Serial.println(vBatt);
+  return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
+}
