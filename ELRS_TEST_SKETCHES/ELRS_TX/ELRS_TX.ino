@@ -74,7 +74,8 @@ int fakeSteeringInput = 3;
 
 void loop()
 {
-    uint16_t receiverBatteryVoltage=0;
+    float receiverBatteryVoltage=0;
+    uint8_t receiverBatteryPercentage=0;
 
     uint32_t currentMicros = micros();
     crsfClass.update();
@@ -83,7 +84,8 @@ void loop()
     if(crsfClass.linkUP())
 {
       const crsf_sensor_battery_t* batt = crsfClass.getBatt();
-      receiverBatteryVoltage = batt->voltage;
+      receiverBatteryVoltage = (float)(batt->voltage)/10.0;
+      receiverBatteryPercentage = batt->remaining;
       const crsfLinkStatistics_t* stat_ptr = crsfClass.getLinkStatistics();
       uint8_t RSSI = stat_ptr->downlink_RSSI;
       RSSI_PERCENT = map(RSSI,RSSI_WORST,RSSI_BEST,0,100);
@@ -137,15 +139,17 @@ void loop()
     //Serial.print("throttleInput:"); Serial.print(throttleInput);
     //Serial.print("throttleDiff:"); Serial.print(throttleDiff);
     //Serial.print("throttleVal:"); Serial.print(throttleVal);
-    Serial.print("THROTTLE:"); Serial.print(rcChannels[THROTTLE]);
+    //Serial.print("THROTTLE:"); Serial.print(rcChannels[THROTTLE]);
     //Serial.print("steeringInput:"); Serial.print(steeringInput);
-    Serial.print(",STEERING:"); Serial.print(rcChannels[RUDDER]);
-    Serial.print(",RXbatt:"); Serial.print(receiverBatteryVoltage/10);
-    Serial.print(",TXbatt:"); Serial.print((float)batteryPercent/100.0);
-    Serial.print(",TELEMETRY_RSSI%/10:"); Serial.print(RSSI_PERCENT/10);
+    //Serial.print(",STEERING:"); Serial.print(rcChannels[RUDDER]);
+    //Serial.print(",RXbatt:"); Serial.print(receiverBatteryVoltage);
+    //Serial.print(",RXbatt%:"); Serial.print(receiverBatteryPercentage);
+
+    //Serial.print(",TXbatt:"); Serial.print((float)batteryPercent/100.0);
+    //Serial.print(",TELEMETRY_RSSI%:"); Serial.print(RSSI_PERCENT);
     //Serial.print(",MIN:"); Serial.print(-3);
     //Serial.print(",MAX:"); Serial.print(9);
-    Serial.println();
+    //Serial.println();
 
     if (currentMicros > crsfTime) {
 

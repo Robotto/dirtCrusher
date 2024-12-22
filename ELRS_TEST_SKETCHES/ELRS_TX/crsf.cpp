@@ -238,7 +238,7 @@ switch (hdr->type) {
           _batt.voltage = be16toh(batt->voltage);
           _batt.current = be16toh(batt->current);
           _batt.capacity = be16toh(batt->capacity);
-          _batt.remaining = be16toh(batt->remaining);
+          _batt.remaining = batt->remaining;
           break;
       case CRSF_FRAMETYPE_LINK_STATISTICS:
           const crsfLinkStatistics_t *link = (crsfLinkStatistics_t *)hdr->data;

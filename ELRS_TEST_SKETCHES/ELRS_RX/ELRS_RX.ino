@@ -91,6 +91,7 @@ void setup() {
 
 int txBatt;
 int txBatt_previous;
+float vBatt;
 
 void loop() {
   int16_t rxThrottle = CRSF_CHANNEL_VALUE_MID;
@@ -101,7 +102,7 @@ void loop() {
 
 
   if (crsf.isLinkUp()) {  //TODO: Check if failsafe is a thing?!
-
+//https://github.com/crsf-wg/crsf/wiki/CRSF_FRAMETYPE_LINK_STATISTICS
     const crsfLinkStatistics_t* stat_ptr = crsf.getLinkStatistics();
     uint8_t RSSI_1 = stat_ptr->uplink_RSSI_1;
     uint8_t RSSI_2 = stat_ptr->uplink_RSSI_2;
@@ -115,18 +116,10 @@ void loop() {
 
 
     //uint8_t LQ = stat_ptr->uplink_Link_quality;
-
-
     rxThrottle = crsf.getChannel(3);  //INDEXED BY 1 YOU PIECE OF SHIIIIT!
-
-
-
     rxRudder = crsf.getChannel(4);
-
     txBatt = map(crsf.getChannel(1),CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,100);
-    
-    if (abs(txBatt-txBatt_previous)<4) txBatt=txBatt_previous; //if battery percentage has moved less than 5%, we stay on previous value
-    
+    //if (abs(txBatt-txBatt_previous)<4) txBatt=txBatt_previous; //if battery percentage has moved less than 5%, we stay on previous value
     txBatt_previous=txBatt;
 
 
@@ -134,15 +127,17 @@ void loop() {
 
 
 
-    //int snsVin = analogRead(PIN_SNS_VIN);
-    // float batteryVoltage = ((float)snsVin * ADC_VLT / ADC_RES) * ((RESISTOR1 + RESISTOR2) / RESISTOR2);
+
+  
     if (millis() - lastTelemetryTXtime > 250) {
-      uint16_t batteryVoltage = (uint16_t)(((1.0 + sin((float)millis() / 1000.0)) * 0.5) * 10.0);
-      sendRxBattery(batteryVoltage, 1.2, 0, 50);
+      //uint16_t batteryVoltage = (uint16_t)(((1.0 + sin((float)millis() / 1000.0)) * 0.5) * 10.0);
+      uint8_t batteryPercentage = readBatt();
+      
+      sendRxBattery(vBatt, 0, 0, (float)batteryPercentage);
       lastTelemetryTXtime = millis();
     }
 
-  }  //https://github.com/crsf-wg/crsf/wiki/CRSF_FRAMETYPE_LINK_STATISTICS
+  }  
   else {
     throttlePWM = throttlePWM_MID;
     steering = 0;
@@ -191,7 +186,6 @@ void loop() {
   }
   previousState = readSteeringFeedback();
   int steeringDelta = steering - previousState;
-  //steeringDelta == 0;                ///////////////////////////////////TODO: THIS IS FOR TESTING!!
   if (steeringDelta == 0) noTurn();  //need to go nowhere
   else if (steeringDelta < 0) turnLeft();
   else if (steeringDelta > 0) turnRight();
@@ -208,15 +202,16 @@ void loop() {
   //Serial.print(",RSSI:"); Serial.print(((float)RSSI_PERCENT/100));
 
   //Serial.print(",TXBATT%:"); Serial.print(((float)txBatt)/100);
+  
+  //Serial.print(",Vbatt:"); Serial.print(vBatt);
+  //Serial.print(",BATT%:"); Serial.print(readBatt());
 
-
-  //Serial.print(",MIN:");
-  //Serial.print(0);
-  //Serial.print(",MAX:");
-  //Serial.print(1);  //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
+  //DUMMY VALUES TO STOP SERIAL PLOTTER FROM AUTOSCALING...
+  //Serial.print(",MIN:"); Serial.print(0);
+  //Serial.print(",MAX:"); Serial.print(1);  
 
   //Serial.println();
-  delay(10);
+  delay(1);
 }
 
 
@@ -238,33 +233,36 @@ int readSteeringFeedback() {  //negative is turning left!
   else return -3 + aState + cState;        //-3,-2,-1
 }
 
+//
 static void sendRxBattery(float voltage, float current, float capacity, float remaining) {
   crsf_sensor_battery_t crsfBatt = { 0 };
 
   // Values are MSB first (BigEndian)
-  crsfBatt.voltage = htobe16((uint16_t)(voltage)*10.0);    //Volts
+  crsfBatt.voltage = htobe16((uint16_t)(voltage*10.0));    //Volts
   crsfBatt.current = htobe16((uint16_t)(current * 10.0));  //Amps
   crsfBatt.capacity = htobe16((uint16_t)(capacity)) << 8;  //mAh (with this implemetation max capacity is 65535mAh)
   crsfBatt.remaining = (uint8_t)(remaining);               //percent
   crsf.queuePacket(CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_FRAMETYPE_BATTERY_SENSOR, &crsfBatt, sizeof(crsfBatt));
 }
 
-//Voltage divider: None.
-#define V_BATTMAX 8.4
-#define V_BATTMIN 3.5
-#define V_ADCMAX 5.0
-#define ADCMAX 1023.0
-#define V_DIVIDER_MAX_OUT 4.2
-#define DIVIDER_FACTOR 2.0
-#define V_CALIBATED_OFFSET 0.09
-#define N_MEASUREMENTS 32
+//Voltage divider: Vbatt - 10K - 10K - A2 - 10K - GND.
+#define V_BATTMAX 8.4f
+#define V_BATTMIN 6.0f
+#define V_ADCMAX 3.3f
+#define ADCMAX 1023.0f
+#define V_DIVIDER_MAX_OUT 2.8f //8.4/3
+#define DIVIDER_FACTOR 0.33f
+#define V_CALIBATED_OFFSET -0.07f
+#define N_MEASUREMENTS 16
+
 
 uint8_t readBatt(){
   //Do a bunch of ADC measurements and convert them to average Vbatt, append Vbatt to report
   unsigned long ADCSum = 0;
   for (int i=0; i<N_MEASUREMENTS; i++) ADCSum+=analogRead(VbattPin); 
   unsigned int ADCavg = ADCSum/N_MEASUREMENTS;
-  float vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
+  //Serial.println(ADCavg);
+  vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
           //Vbatt minimum = 3.0, VbattMaximum = 4.2
   //Serial.println(vBatt);
   //return (uint8_t)50;
