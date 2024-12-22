@@ -199,23 +199,23 @@ void loop() {
 
   
   //Serial.print("rxThrottle:"); Serial.print(rxThrottle);
-  Serial.print("Throttle(PWM):"); Serial.print((((float)throttlePWM)-32.0)/30.0);
+  //Serial.print("Throttle(PWM):"); Serial.print((((float)throttlePWM)-32.0)/30.0);
 
   //Serial.print("rxRudder:"); Serial.print(rxRudder);
   
-  Serial.print(",Steering:"); Serial.print((float)(steering+3.0)/6.0);
+  //Serial.print(",Steering:"); Serial.print((float)(steering+3.0)/6.0);
   
-  Serial.print(",RSSI:"); Serial.print(((float)RSSI_PERCENT/100));
+  //Serial.print(",RSSI:"); Serial.print(((float)RSSI_PERCENT/100));
 
-  Serial.print(",TXBATT%:"); Serial.print(((float)txBatt)/100);
+  //Serial.print(",TXBATT%:"); Serial.print(((float)txBatt)/100);
 
 
-  Serial.print(",MIN:");
-  Serial.print(0);
-  Serial.print(",MAX:");
-  Serial.print(1);  //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
+  //Serial.print(",MIN:");
+  //Serial.print(0);
+  //Serial.print(",MAX:");
+  //Serial.print(1);  //DUMMY VALUE TO STOP SERIAL PLOTTER FROM AUTOSCALING...
 
-  Serial.println();
+  //Serial.println();
   delay(10);
 }
 
@@ -267,6 +267,6 @@ uint8_t readBatt(){
   float vBatt = (float)ADCavg*V_ADCMAX/ADCMAX/DIVIDER_FACTOR+V_CALIBATED_OFFSET; 
           //Vbatt minimum = 3.0, VbattMaximum = 4.2
   //Serial.println(vBatt);
-  return (uint8_t)50;
+  //return (uint8_t)50;
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }

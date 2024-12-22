@@ -137,15 +137,15 @@ void loop()
     //Serial.print("throttleInput:"); Serial.print(throttleInput);
     //Serial.print("throttleDiff:"); Serial.print(throttleDiff);
     //Serial.print("throttleVal:"); Serial.print(throttleVal);
-    //Serial.print("THROTTLE:"); Serial.print(rcChannels[THROTTLE]);
+    Serial.print("THROTTLE:"); Serial.print(rcChannels[THROTTLE]);
     //Serial.print("steeringInput:"); Serial.print(steeringInput);
-    //Serial.print(",STEERING:"); Serial.print(rcChannels[RUDDER]);
-    //Serial.print(",RXbatt:"); Serial.print(receiverBatteryVoltage/10);
-    //Serial.print(",TXbatt:"); Serial.print((float)batteryPercent/100.0);
-    //Serial.print(",TELEMETRY_RSSI%/10:"); Serial.print(RSSI_PERCENT/10);
+    Serial.print(",STEERING:"); Serial.print(rcChannels[RUDDER]);
+    Serial.print(",RXbatt:"); Serial.print(receiverBatteryVoltage/10);
+    Serial.print(",TXbatt:"); Serial.print((float)batteryPercent/100.0);
+    Serial.print(",TELEMETRY_RSSI%/10:"); Serial.print(RSSI_PERCENT/10);
     //Serial.print(",MIN:"); Serial.print(-3);
     //Serial.print(",MAX:"); Serial.print(9);
-    //Serial.println();
+    Serial.println();
 
     if (currentMicros > crsfTime) {
 
@@ -161,7 +161,7 @@ void loop()
             if (loopCount > 500 && loopCount <= 505) { // repeat 5 packets to avoid bad packet, change rate setting
                 // Build commond packet
                 if (currentSetting == 1 || currentSetting == 2) {
-                    crsfClass.crsfPrepareCmdPacket(crsfCmdPacket, ELRS_PKT_RATE_COMMAND, currentPktRate);
+                    crsfClass.crsfPrepareCmdPacket(crsfCmdPacket  , ELRS_PKT_RATE_COMMAND, currentPktRate);
                     crsfClass.CrsfWritePacket(crsfCmdPacket, CRSF_CMD_PACKET_SIZE);
                 } else if (currentSetting == 3) {
                     crsfClass.crsfPrepareCmdPacket(crsfCmdPacket, ELRS_BIND_COMMAND, ELRS_START_COMMAND);
