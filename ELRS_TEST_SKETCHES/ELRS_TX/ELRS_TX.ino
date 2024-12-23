@@ -2,6 +2,10 @@
 
 #include "config.h"
 #include "crsf.h"
+#include <U8g2lib.h>
+U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0); 
+
+#include "gfx.h"
 
 int Throttle_value = 0;
 int Rudder_value = 0;
@@ -41,6 +45,8 @@ float RSSI_BEST=50.0;  //dBm (negative)
 float RSSI_PERCENT=0;
 
 
+
+
 void setup()
 {
     // inialize rc data
@@ -63,6 +69,19 @@ void setup()
     Serial.begin(250000);
     crsfClass.begin(); //Set to use Serial1 on the Leonardo...
 
+
+  u8g2.begin();
+//  u8g2.setDisplayRotation(U8G2_R0);
+  //u8g2.setFont(u8g_font_baby); //11 pixels high?
+  u8g2.setFont(u8g_font_unifont); //11 pixels high?
+  u8g2.setFontMode(1); //transparent font
+  u8g2.clearBuffer();					// clear the internal memory
+  u8g2.drawXBMP( car_x, car_y, car_width, car_height, car_bits);
+  u8g2.drawXBMP( controller_x, controller_y, controller_width, controller_height, controller_bits);
+  u8g2.drawXBMP( antenna_x, antenna_y, antenna_width, antenna_height, antenna_bits);
+  u8g2.sendBuffer();         // transfer internal memory to the display
+  
+  //redraw(255,readBatt(),ARC);
 }
 
 /*
@@ -71,6 +90,8 @@ int fakeThrottleInput = 0;
 int fakeSpeedFactor = 1;
 int fakeSteeringInput = 3;
 */
+unsigned long oledTimer=0;
+#define OLED_FRAMETIME_MS 500
 
 void loop()
 {
@@ -93,10 +114,17 @@ void loop()
 }   
 
 
+
+
   int8_t speedFactor = checkPaddles(); //1, 2 or 3
   int8_t throttleInput = getThrottle(); //-3 to 3
   int8_t steeringInput = getSteering()*-1; //-3 to 3
   int8_t batteryPercent = readBatt();
+
+if(millis()-oledTimer>OLED_FRAMETIME_MS){
+  redraw(receiverBatteryPercentage, batteryPercent, RSSI_PERCENT);
+  oledTimer=millis();
+}
 /*
   if(millis()-fakeTimer>250) {
     fakeThrottleInput++;
@@ -282,4 +310,85 @@ uint8_t readBatt(){
           //Vbatt minimum = 3.0, VbattMaximum = 4.2
   //Serial.println(vBatt);
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
+}
+
+void redraw(uint8_t _rxBatt, uint8_t _txBatt, uint8_t _RSSI)
+{
+  static uint8_t lastRxPercent;
+  static uint8_t lastTxPercent;
+  static uint8_t highestRSSI;
+  static uint8_t lastRSSI;
+
+  //unsigned long in = millis();  
+  /*
+  Serial.print(millis());
+  Serial.print(',');
+  */
+  //Trying to make a non-zero ARC stick to the screen for longer:
+  //shouldn't really do calculations in here, but the framerate is 1Hz, so it feels right...
+  if(_RSSI<1){ //16 is the error state when there's no connection...
+  if(_RSSI>highestRSSI) highestRSSI=_RSSI;
+  else if(highestRSSI>0) highestRSSI--; //should reach 0 after a few seconds.
+
+  _RSSI = highestRSSI; //sort of an injection of a new funtionality into old code.. sorry.
+  }
+
+/*
+  Serial.print(lastTelemetryRXtime);
+  Serial.print(',');
+  Serial.print(millis()-lastTelemetryRXtime);
+  Serial.print(',');
+  Serial.print(rxBatt);
+  Serial.print(',');
+  Serial.print(txBatt);
+  Serial.print(',');
+  */
+  
+  
+  //Serial.println(_ARC);
+  if(_rxBatt != lastRxPercent || _txBatt != lastTxPercent || _RSSI != lastRSSI){
+
+        u8g2.setDrawColor(0);
+        u8g2.drawBox(car_width+4,1,100,12); //clear RX percentage bar
+        u8g2.drawBox(controller_width+4,19,antenna_x-(controller_width+4),12); //clear TX percentage bar
+        u8g2.drawBox(88,19,40,12); //clear ARC bar
+        
+    //Boxes:
+    u8g2.setDrawColor(1);
+    if(_rxBatt<101) u8g2.drawBox(24,1,_rxBatt,12); //RX
+    u8g2.drawBox(controller_width+4,19,_txBatt/3,12);             //TX
+    if(_RSSI>0) u8g2.drawBox(88,19,map(_RSSI,0,100,0,40),12);   //ARC
+    
+    //Text:
+    u8g2.setDrawColor(2);
+
+        //RX
+        u8g2.setCursor(60,12);
+        if(_rxBatt>100) u8g2.print("!");
+        else {
+          u8g2.print(_rxBatt);
+          u8g2.print("%");
+        }
+        //TX
+        u8g2.setCursor(30,30);
+        u8g2.print(_txBatt);
+        u8g2.print("%");
+
+        //RSSI
+        //u8g2.setCursor(104,30);
+        u8g2.setCursor(92,30);
+      if(_RSSI>0) {
+        u8g2.print(_RSSI);
+        u8g2.print("%");
+      }
+      else u8g2.print("!");
+
+
+    lastRxPercent = _rxBatt;
+    lastTxPercent = _txBatt;
+    lastRSSI = _RSSI;
+    u8g2.sendBuffer();         // transfer internal memory to the display
+  }
+  //Serial.println(millis()-in);
+
 }
