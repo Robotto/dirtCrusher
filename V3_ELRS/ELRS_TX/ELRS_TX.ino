@@ -364,12 +364,12 @@ void redraw(uint8_t _rxBatt, float _rxVolts, uint8_t _txBatt, uint8_t _RSSI)
     u8g2.setDrawColor(2);
 
         //RX
-        u8g2.setCursor(60,12);
+        u8g2.setCursor(30,12);
         if(_rxBatt>100) u8g2.print("!");
         else {
           u8g2.print(_rxBatt);
           u8g2.print("% ");
-          u8g2.print(String(_rxVolts,1));
+          u8g2.print(String(_rxVolts/2.0,1));
           u8g2.print("V");
         }
         //TX
