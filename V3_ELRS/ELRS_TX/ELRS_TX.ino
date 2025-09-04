@@ -122,7 +122,7 @@ void loop()
   int8_t batteryPercent = readBatt();
 
 if(millis()-oledTimer>OLED_FRAMETIME_MS){
-  redraw(receiverBatteryPercentage, batteryPercent, RSSI_PERCENT);
+  redraw(receiverBatteryPercentage, receiverBatteryVoltage, batteryPercent, RSSI_PERCENT);
   oledTimer=millis();
 }
 /*
@@ -312,19 +312,20 @@ uint8_t readBatt(){
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
 
-void redraw(uint8_t _rxBatt, uint8_t _txBatt, uint8_t _RSSI)
+void redraw(uint8_t _rxBatt, float _rxVolts, uint8_t _txBatt, uint8_t _RSSI)
 {
   static uint8_t lastRxPercent;
   static uint8_t lastTxPercent;
   static uint8_t highestRSSI;
   static uint8_t lastRSSI;
+  
 
   //unsigned long in = millis();  
   /*
   Serial.print(millis());
   Serial.print(',');
   */
-  //Trying to make a non-zero ARC stick to the screen for longer:
+  //Trying to make a non-zero signal quality stick to the screen for longer:
   //shouldn't really do calculations in here, but the framerate is 1Hz, so it feels right...
   if(_RSSI<1){ //16 is the error state when there's no connection...
   if(_RSSI>highestRSSI) highestRSSI=_RSSI;
@@ -367,7 +368,9 @@ void redraw(uint8_t _rxBatt, uint8_t _txBatt, uint8_t _RSSI)
         if(_rxBatt>100) u8g2.print("!");
         else {
           u8g2.print(_rxBatt);
-          u8g2.print("%");
+          u8g2.print("% ");
+          u8g2.print(String(_rxVolts,1));
+          u8g2.print("V");
         }
         //TX
         u8g2.setCursor(30,30);
