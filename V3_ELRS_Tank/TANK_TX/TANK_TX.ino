@@ -122,7 +122,7 @@ void loop()
   int8_t batteryPercent = readBatt();
 
 if(millis()-oledTimer>OLED_FRAMETIME_MS){
-  redraw(receiverBatteryPercentage, receiverBatteryVoltage, batteryPercent, RSSI_PERCENT);
+  redraw(receiverBatteryPercentage, receiverBatteryVoltage, batteryPercent, RSSI_PERCENT, speedFactor);
   oledTimer=millis();
 }
 /*
@@ -156,8 +156,8 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
 
   int batteryChannel = map(batteryPercent,0,100,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
-  int gearDiff = (speedFactor-2)*546; //546 = (CRSF_CHANNEL_VALUE_SPAN/3)
-  int gearVal = CRSF_CHANNEL_VALUE_MID + speedFactor;
+  int gearDiff = (int)(speedFactor-2)*546; //546 = (CRSF_CHANNEL_VALUE_SPAN/3)
+  int gearVal = CRSF_CHANNEL_VALUE_MID + gearDiff;
 
   //TEST waves:
     //Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
@@ -169,6 +169,7 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
     rcChannels[AUX1]      = constrain(gearVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
     //Serial.print("speedFactor:"); Serial.print(speedFactor);
+    //Serial.print("rcChannels[AUX1]:"); Serial.print(rcChannels[AUX1]);
     //Serial.print("throttleInput:"); Serial.print(throttleInput);
     //Serial.print("throttleDiff:"); Serial.print(throttleDiff);
     //Serial.print("throttleVal:"); Serial.print(throttleVal);
@@ -317,12 +318,13 @@ uint8_t readBatt(){
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
 
-void redraw(uint8_t _rxBatt, float _rxVolts, uint8_t _txBatt, uint8_t _RSSI)
+void redraw(uint8_t _rxBatt, float _rxVolts, uint8_t _txBatt, uint8_t _RSSI, uint8_t _speedFactor)
 {
   static uint8_t lastRxPercent;
   static uint8_t lastTxPercent;
   static uint8_t highestRSSI;
   static uint8_t lastRSSI;
+  static uint8_t lastSpeedFactor;
   
 
   //unsigned long in = millis();  
@@ -352,7 +354,7 @@ void redraw(uint8_t _rxBatt, float _rxVolts, uint8_t _txBatt, uint8_t _RSSI)
   
   
   //Serial.println(_ARC);
-  if(_rxBatt != lastRxPercent || _txBatt != lastTxPercent || _RSSI != lastRSSI){
+  if(_rxBatt != lastRxPercent || _txBatt != lastTxPercent || _RSSI != lastRSSI || _speedFactor != lastSpeedFactor){
 
         u8g2.setDrawColor(0);
         u8g2.drawBox(car_width+4,1,100,12); //clear RX percentage bar
@@ -365,6 +367,11 @@ void redraw(uint8_t _rxBatt, float _rxVolts, uint8_t _txBatt, uint8_t _RSSI)
     u8g2.drawBox(controller_width+4,19,_txBatt/3,12);             //TX
     if(_RSSI>0) u8g2.drawBox(88,19,map(_RSSI,0,100,0,40),12);   //ARC
     
+            u8g2.setDrawColor(0);
+            u8g2.drawBox(44,15,28,4); //clear speedfactor bar    
+            u8g2.setDrawColor(1);
+    for( int i = 0 ; i<_speedFactor; i++) u8g2.drawBox(45+i*10,16,7,2); /// Gear speed indicator
+
     //Text:
     u8g2.setDrawColor(2);
 
@@ -395,6 +402,7 @@ void redraw(uint8_t _rxBatt, float _rxVolts, uint8_t _txBatt, uint8_t _RSSI)
     lastRxPercent = _rxBatt;
     lastTxPercent = _txBatt;
     lastRSSI = _RSSI;
+    lastSpeedFactor = _speedFactor;
     u8g2.sendBuffer();         // transfer internal memory to the display
   }
   //Serial.println(millis()-in);
