@@ -156,26 +156,29 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
 
   int batteryChannel = map(batteryPercent,0,100,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
-  int gearDiff = (int)(speedFactor-2)*546; //546 = (CRSF_CHANNEL_VALUE_SPAN/3)
-  int gearVal = CRSF_CHANNEL_VALUE_MID + gearDiff;
+  int gearVal = CRSF_CHANNEL_VALUE_MIN;
+  if(speedFactor==2) gearVal=CRSF_CHANNEL_VALUE_MID;
+  if(speedFactor==3) gearVal=CRSF_CHANNEL_VALUE_MAX;
 
   //TEST waves:
     //Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
     //Rudder_value = (uint16_t)(((1.0+cos((float)millis()/1000.0))*0.5)*ADC_MAX); 
 
-    rcChannels[AILERON]   = constrain(batteryChannel,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX); 
-    rcChannels[THROTTLE]  = constrain(throttleVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
-    rcChannels[RUDDER]    = constrain(rudderVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
-    rcChannels[AUX1]      = constrain(gearVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
+   // rcChannels[AILERON]   = constrain(batteryChannel,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX); 
+    //rcChannels[THROTTLE]  = constrain(throttleVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
+    //rcChannels[RUDDER]    = constrain(rudderVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
+    //rcChannels[ELEVATOR]      = constrain(gearVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
     //Serial.print("speedFactor:"); Serial.print(speedFactor);
-    //Serial.print("rcChannels[AUX1]:"); Serial.print(rcChannels[AUX1]);
+    //Serial.print(",rcChannels[THROTTLE]:"); Serial.print(rcChannels[THROTTLE]);
+    //Serial.print(",rcChannels[RUDDER]:"); Serial.print(rcChannels[RUDDER]);
+
+    //Serial.print(",rcChannels[ELEVATOR]:"); Serial.print(rcChannels[ELEVATOR]);
     //Serial.print("throttleInput:"); Serial.print(throttleInput);
     //Serial.print("throttleDiff:"); Serial.print(throttleDiff);
     //Serial.print("throttleVal:"); Serial.print(throttleVal);
     //Serial.print("THROTTLE:"); Serial.print(rcChannels[THROTTLE]);
     //Serial.print("steeringInput:"); Serial.print(steeringInput);
-    //Serial.print(",STEERING:"); Serial.print(rcChannels[RUDDER]);
     //Serial.print(",RXbatt:"); Serial.print(receiverBatteryVoltage);
     //Serial.print(",RXbatt%:"); Serial.print(receiverBatteryPercentage);
 

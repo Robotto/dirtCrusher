@@ -131,7 +131,7 @@ void loop() {
     //uint8_t LQ = stat_ptr->uplink_Link_quality;
     rxThrottle = crsf.getChannel(3);  //INDEXED BY 1 YOU PIECE OF SHIIIIT!
     rxRudder = crsf.getChannel(4);
-    rxGear = crsf.getChannel(5); //AUX1 -> which gear are we in? 1,2,3
+    rxGear = crsf.getChannel(2); //AUX1 -> which gear are we in? 1,2,3
     txBatt = map(crsf.getChannel(1),CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,100);
     //if (abs(txBatt-txBatt_previous)<4) txBatt=txBatt_previous; //if battery percentage has moved less than 5%, we stay on previous value
     txBatt_previous=txBatt;
@@ -163,11 +163,11 @@ void loop() {
     if(millis() > notConnectedPrintTime+3000) { Serial.println("CRSF link is down@" + String(millis())); notConnectedPrintTime=millis();}
   }
 
+
   //handle deadzone:
   if (abs(rxThrottle - CRSF_CHANNEL_VALUE_MID) < THROTTLE_DEADZONE) rxThrottle = CRSF_CHANNEL_VALUE_MID;
   if (abs(rxRudder - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
-  if (abs(rxGear - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
-
+  
 
   //HANDLE RSSI:
   //rssiPWM = map(RSSI_PERCENT, 0, 100, 0, 255);
@@ -257,13 +257,16 @@ void loop() {
 //  analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM_MID);  //TODO: Determine if deadzone is large enough
 
 
-  //Serial.print("rxThrottle:"); Serial.print(rxThrottle);
-  //Serial.print("rxRudder:"); Serial.print(rxRudder);
-  Serial.print("LEFT_Throttle(PWM):"); Serial.print(((float)LEFT_throttlePWM));
-  Serial.print(",RIGHT_Throttle(PWM):"); Serial.print(((float)RIGHT_throttlePWM));
+
+  Serial.print(",rxGear:"); Serial.print(rxGear);
+  Serial.print(",rxThrottle:"); Serial.print(rxThrottle);
+  
+  //Serial.print(",rxRudder:"); Serial.print(rxRudder);
+  //Serial.print("LEFT_Throttle(PWM):"); Serial.print(((float)LEFT_throttlePWM));
+  //Serial.print(",RIGHT_Throttle(PWM):"); Serial.print(((float)RIGHT_throttlePWM));
  
   //Serial.print("Steering:"); Serial.print((steering));
-  Serial.print(",Fullness:"); Serial.print((throttleFullness*50.0)+50);
+  //Serial.print(",Fullness:"); Serial.print((throttleFullness*50.0)+50);
 
   
   //Serial.print(",RSSI:"); Serial.print(((float)RSSI_PERCENT/100));
@@ -274,8 +277,8 @@ void loop() {
   //Serial.print(",BATT%:"); Serial.print(readBatt());
 
   //DUMMY VALUES TO STOP SERIAL PLOTTER FROM AUTOSCALING...
-  Serial.print(",MIN:"); Serial.print(0);
-  Serial.print(",MAX:"); Serial.print(100);  
+  //Serial.print(",MIN:"); Serial.print(0);
+  //Serial.print(",MAX:"); Serial.print(100);  
 
   Serial.println();
   delay(1);
