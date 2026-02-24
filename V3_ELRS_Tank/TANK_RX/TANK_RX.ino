@@ -49,6 +49,7 @@ int LEFT_throttlePWM = LEFT_throttlePWM_MID;
 int RIGHT_throttlePWM = RIGHT_throttlePWM_MID;
 
 int steering = 0;
+int gear = 1; //1,2,3
 
 
 //Objects:
@@ -106,6 +107,8 @@ float vBatt;
 void loop() {
   int16_t rxThrottle = CRSF_CHANNEL_VALUE_MID;
   int16_t rxRudder = CRSF_CHANNEL_VALUE_MID;
+  int16_t rxGear = CRSF_DIGITAL_CHANNEL_MIN; //lowest gear
+
   // Must call crsf.update() in loop() to process data
   crsf.update();
 
@@ -128,6 +131,7 @@ void loop() {
     //uint8_t LQ = stat_ptr->uplink_Link_quality;
     rxThrottle = crsf.getChannel(3);  //INDEXED BY 1 YOU PIECE OF SHIIIIT!
     rxRudder = crsf.getChannel(4);
+    rxGear = crsf.getChannel(5); //AUX1 -> which gear are we in? 1,2,3
     txBatt = map(crsf.getChannel(1),CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,100);
     //if (abs(txBatt-txBatt_previous)<4) txBatt=txBatt_previous; //if battery percentage has moved less than 5%, we stay on previous value
     txBatt_previous=txBatt;
@@ -151,17 +155,31 @@ void loop() {
   else {
     LEFT_throttlePWM = LEFT_throttlePWM_MID;
     RIGHT_throttlePWM = RIGHT_throttlePWM_MID;
+    rxGear = CRSF_DIGITAL_CHANNEL_MIN;
     steering = 0;
     RSSI_PERCENT = 0.0;
     txBatt=0;
+    static unsigned long notConnectedPrintTime = 0;
+    if(millis() > notConnectedPrintTime+3000) { Serial.println("CRSF link is down@" + String(millis())); notConnectedPrintTime=millis();}
   }
+
+  //handle deadzone:
+  if (abs(rxThrottle - CRSF_CHANNEL_VALUE_MID) < THROTTLE_DEADZONE) rxThrottle = CRSF_CHANNEL_VALUE_MID;
+  if (abs(rxRudder - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
+  if (abs(rxGear - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
+
 
   //HANDLE RSSI:
   //rssiPWM = map(RSSI_PERCENT, 0, 100, 0, 255);
   //analogWrite(PWMrssiPin, rssiPWM);
 
+  //HANDLE Gear:
+  gear=1;
+  if ( rxGear == CRSF_CHANNEL_VALUE_MID) gear = 2;
+  if ( rxGear > CRSF_CHANNEL_VALUE_MID) gear = 3;
+
+
   //HANDLE THROTTLE:
-  if (abs(rxThrottle - CRSF_CHANNEL_VALUE_MID) < THROTTLE_DEADZONE) rxThrottle = CRSF_CHANNEL_VALUE_MID;
   
   //Calculate throttle before adding/subtracting steering values:
   LEFT_throttlePWM = map(rxThrottle, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, LEFT_throttlePWM_MIN, LEFT_throttlePWM_MAX);
@@ -169,7 +187,7 @@ void loop() {
   
 
   //HANDLE STEERING:
-  if (abs(rxRudder - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
+  
   //steering = map(rxRudder, CRSF_CHANNEL_VALUE_MIN+2, CRSF_CHANNEL_VALUE_MAX-2, -3, 3); //for some reason the mapping was a bit off...
   switch (rxRudder){
     case 174:
@@ -203,28 +221,34 @@ void loop() {
   //else if (steeringDelta < 0) turnLeft();
   //else if (steeringDelta > 0) turnRight();
   
-  //TODO: Determine steering constant for each channel.
+  //TODO: Determine steering constant for each gear!
   //IT SHOULD PROBABLY be inversely proportional to the speed....
-  
-  float steeringAuthority=1.76;
+                                  // 0, 1,  2,  3
+  float steeringAuthorityPerGear[4]={0,1.9,1.76,1.0};
 
-  
+  float steeringAuthority=steeringAuthorityPerGear[gear];
+
   //Calculate throttle percentage to determine how much to steer:
-  
   float throttleFullness = (map(rxThrottle,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,2000)-1000)/1000.0;
 
 
   if(throttleFullness>0){
+
     if(steering<0) LEFT_throttlePWM += (int)((steeringAuthority-throttleFullness)*(float)steering);
     else if (steering>0) RIGHT_throttlePWM -= (int)((steeringAuthority-throttleFullness)*(float)steering);
+  
   }
   else if(throttleFullness<0){
+  
     if(steering<0) LEFT_throttlePWM -= (int)((steeringAuthority-throttleFullness)*(float)steering);
     else if (steering>0) RIGHT_throttlePWM += (int)((steeringAuthority-throttleFullness)*(float)steering);
+  
   }
   else{
-    LEFT_throttlePWM = LEFT_throttlePWM_MID + steering;
-    RIGHT_throttlePWM = RIGHT_throttlePWM_MID - steering;
+  
+    LEFT_throttlePWM = LEFT_throttlePWM_MID + (int)((float)steering+0.5*(float)steering*(gear-1)); //TODO: Is this just lidicrous??
+    RIGHT_throttlePWM = RIGHT_throttlePWM_MID - (int)((float)steering+0.5*(float)steering*(gear-1));
+  
   }
   
   analogWrite(LEFT_PWMmotorPin, LEFT_throttlePWM);  //TODO: Determine if deadzone is large enough
@@ -311,3 +335,14 @@ uint8_t readBatt(){
   //return (uint8_t)50;
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
+
+//Not using this shitty approach:
+/*
+#define NUMBER_OF_FIXED_RC_VALUES 7
+const static int16_t HARDCODED_RC_CHANNEL_VALUES[NUMBER_OF_FIXED_RC_VALUES] = {174,446,718,992,1265,1539,1811};
+
+int8_t getCRSFindex(int16_t CRSF_value){ 
+  for(int i = 0; i<NUMBER_OF_FIXED_RC_VALUES; i++ ) if(CRSF_value==HARDCODED_RC_CHANNEL_VALUES[i]) return i;
+  return -1;
+}
+*/

@@ -155,6 +155,10 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
   int rudderVal = CRSF_CHANNEL_VALUE_MID + rudderDiff;
 
   int batteryChannel = map(batteryPercent,0,100,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
+
+  int gearDiff = (speedFactor-2)*546; //546 = (CRSF_CHANNEL_VALUE_SPAN/3)
+  int gearVal = CRSF_CHANNEL_VALUE_MID + speedFactor;
+
   //TEST waves:
     //Throttle_value = (uint16_t)(((1.0+sin((float)millis()/1000.0))*0.5)*ADC_MAX);
     //Rudder_value = (uint16_t)(((1.0+cos((float)millis()/1000.0))*0.5)*ADC_MAX); 
@@ -162,6 +166,7 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
     rcChannels[AILERON]   = constrain(batteryChannel,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX); 
     rcChannels[THROTTLE]  = constrain(throttleVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
     rcChannels[RUDDER]    = constrain(rudderVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
+    rcChannels[AUX1]      = constrain(gearVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
     //Serial.print("speedFactor:"); Serial.print(speedFactor);
     //Serial.print("throttleInput:"); Serial.print(throttleInput);
