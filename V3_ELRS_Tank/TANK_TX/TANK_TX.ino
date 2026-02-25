@@ -170,22 +170,22 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
     rcChannels[ELEVATOR]  = constrain(gearVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
     //Serial.print("speedFactor:"); Serial.print(speedFactor);
-    //Serial.print(",rcChannels[THROTTLE]:"); Serial.print(rcChannels[THROTTLE]);
-    //Serial.print(",rcChannels[RUDDER]:"); Serial.print(rcChannels[RUDDER]);
+    //Serial.print("\tSteering:"); Serial.print(steeringInput);
+    //Serial.print("\tRXbatt:"); Serial.print(receiverBatteryVoltage);
+    //Serial.print("\t[THROTTLE]:"); Serial.print(rcChannels[THROTTLE]);
+    //Serial.print("\t[RUDDER]:"); Serial.print(rcChannels[RUDDER]);
+    //Serial.print("\t[ELEVATOR]:"); Serial.print(rcChannels[ELEVATOR]);
 
-    //Serial.print(",rcChannels[ELEVATOR]:"); Serial.print(rcChannels[ELEVATOR]);
-    //Serial.print("throttleInput:"); Serial.print(throttleInput);
-    //Serial.print("throttleDiff:"); Serial.print(throttleDiff);
-    //Serial.print("throttleVal:"); Serial.print(throttleVal);
-    //Serial.print("THROTTLE:"); Serial.print(rcChannels[THROTTLE]);
-    //Serial.print("steeringInput:"); Serial.print(steeringInput);
-    //Serial.print(",RXbatt:"); Serial.print(receiverBatteryVoltage);
-    //Serial.print(",RXbatt%:"); Serial.print(receiverBatteryPercentage);
+    //Serial.print("\tthrottleInput:"); Serial.print(throttleInput);
+    //Serial.print("\tthrottleDiff:"); Serial.print(throttleDiff);
+    //Serial.print("\tthrottleVal:"); Serial.print(throttleVal);
+    //Serial.print("\tTHROTTLE:"); Serial.print(rcChannels[THROTTLE]);
+    //Serial.print("\tRXbatt%:"); Serial.print(receiverBatteryPercentage);
 
-    //Serial.print(",TXbatt:"); Serial.print((float)batteryPercent/100.0);
-    //Serial.print(",TELEMETRY_RSSI%:"); Serial.print(RSSI_PERCENT);
-    //Serial.print(",MIN:"); Serial.print(-3);
-    //Serial.print(",MAX:"); Serial.print(9);
+    //Serial.print("\tTXbatt:"); Serial.print((float)batteryPercent/100.0);
+    //Serial.print("\tTELEMETRY_RSSI%:"); Serial.print(RSSI_PERCENT);
+    //Serial.print("\tMIN:"); Serial.print(-3);
+    //Serial.print("\tMAX:"); Serial.print(9);
     //Serial.println();
 
     if (currentMicros > crsfTime) {

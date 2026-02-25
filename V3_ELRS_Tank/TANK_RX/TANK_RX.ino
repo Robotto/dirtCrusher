@@ -167,7 +167,7 @@ void loop() {
   //handle deadzone:
   if (abs(rxThrottle - CRSF_CHANNEL_VALUE_MID) < THROTTLE_DEADZONE) rxThrottle = CRSF_CHANNEL_VALUE_MID;
   if (abs(rxRudder - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
-  if (abs(rxGear - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
+  if (abs(rxGear - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxGear = CRSF_CHANNEL_VALUE_MID;
   
 
   //HANDLE RSSI:
@@ -226,24 +226,23 @@ void loop() {
   //Calculate throttle percentage to determine how much to steer:
   float throttleFullness = (map(rxThrottle,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,2000)-1000)/1000.0;
 
+  if(steering!=0) {
+    if(throttleFullness>0){
 
-  if(throttleFullness>0){
-
-    if(steering<0) LEFT_throttlePWM += (int)((steeringAuthority-throttleFullness)*(float)steering);
-    else if (steering>0) RIGHT_throttlePWM -= (int)((steeringAuthority-throttleFullness)*(float)steering);
-  
-  }
-  else if(throttleFullness<0){
-  
-    if(steering<0) RIGHT_throttlePWM -= (int)((steeringAuthority-throttleFullness)*(float)steering);
-    else if (steering>0) LEFT_throttlePWM += (int)((steeringAuthority-throttleFullness)*(float)steering);
-  
-  }
-  else{
-  
-    LEFT_throttlePWM = LEFT_throttlePWM_MID + (int)((float)steering+0.5*(float)steering*(gear-1)); //TODO: Is this just ludicrous??
-    RIGHT_throttlePWM = RIGHT_throttlePWM_MID - (int)((float)steering+0.5*(float)steering*(gear-1));
-  
+      if(steering<0) LEFT_throttlePWM += (int)((steeringAuthority-throttleFullness)*(float)steering);
+      else if (steering>0) RIGHT_throttlePWM -= (int)((steeringAuthority-throttleFullness)*(float)steering);
+    
+    }
+    else if(throttleFullness<0){
+    
+      if(steering<0) RIGHT_throttlePWM -= (int)((steeringAuthority-throttleFullness)*(float)steering);
+      else if (steering>0) LEFT_throttlePWM += (int)((steeringAuthority-throttleFullness)*(float)steering);
+    
+    }
+    else{
+      LEFT_throttlePWM = LEFT_throttlePWM_MID + (int)((float)steering/(float)gear+(float)steering*(float)gear*steeringAuthority+0.3/(float)steering);
+      RIGHT_throttlePWM = RIGHT_throttlePWM_MID - (int)((float)steering/(float)gear+(float)steering*(float)gear*steeringAuthority+0.3/(float)steering);
+    }
   }
   
   analogWrite(LEFT_PWMmotorPin, LEFT_throttlePWM);  //TODO: Determine if deadzone is large enough
@@ -252,32 +251,33 @@ void loop() {
 //  analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM_MID);  //TODO: Determine if deadzone is large enough
 
 
-
-  //Serial.print("Gear:"); Serial.print(gear);
-  //Serial.print(",rxGear:"); Serial.print(rxGear);
-  //Serial.print(",rxThrottle:"); Serial.print(rxThrottle);
-  //Serial.print(",rxRudder:"); Serial.print(rxRudder);
+  
+  Serial.print("Gear:"); Serial.print(gear);
+  Serial.print("\trxGear:"); Serial.print(rxGear);
+  Serial.print("\trxThrottle:"); Serial.print(rxThrottle);
+  Serial.print("\trxRudder:"); Serial.print(rxRudder);
   
  
-  //Serial.print("\tSteering:"); Serial.print((steering));
+  Serial.print("\tSteering:"); Serial.print((steering));
   //Serial.print("\tThrottle:"); Serial.print((throttleFullness));
 
-  //Serial.print("\tL_dPWM:"); Serial.print(((float)LEFT_throttlePWM-47));
-  //Serial.print("\tR_dPWM:"); Serial.print(((float)RIGHT_throttlePWM-47));
+  Serial.print("\tL_dPWM:"); Serial.print(((float)LEFT_throttlePWM-LEFT_throttlePWM_MID));
+  Serial.print("\tR_dPWM:"); Serial.print(((float)RIGHT_throttlePWM-RIGHT_throttlePWM_MID));
   
-  //Serial.print(",RSSI:"); Serial.print(((float)RSSI_PERCENT));
+  //Serial.print("\tRSSI:"); Serial.print(((float)RSSI_PERCENT));
 
-  //Serial.print(",TXBATT%:"); Serial.print(((float)txBatt));
+  //Serial.print("\tTXBATT%:"); Serial.print(((float)txBatt));
   
-  //Serial.print(",Vbatt:"); Serial.print(vBatt);
-  //Serial.print(",BATT%:"); Serial.print(readBatt());
+  //Serial.print("\tVbatt:"); Serial.print(vBatt);
+  //Serial.print("\tBATT%:"); Serial.print(readBatt());
 
   //DUMMY VALUES TO STOP SERIAL PLOTTER FROM AUTOSCALING...
-  //Serial.print(",MIN:"); Serial.print(0);
-  //Serial.print(",MAX:"); Serial.print(100);  
+  //Serial.print("\tMIN:"); Serial.print(0);
+  //Serial.print("\tMAX:"); Serial.print(100);  
 
-  //Serial.println();
-  //delay(1);
+  Serial.println();
+  delay(1);
+
 }
 
 static void sendRxBattery(float voltage, float current, float capacity, float remaining) {
