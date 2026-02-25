@@ -131,7 +131,7 @@ void loop() {
     //uint8_t LQ = stat_ptr->uplink_Link_quality;
     rxThrottle = crsf.getChannel(3);  //INDEXED BY 1 YOU PIECE OF SHIIIIT!
     rxRudder = crsf.getChannel(4);
-    rxGear = crsf.getChannel(2); //AUX1 -> which gear are we in? 1,2,3
+    rxGear = crsf.getChannel(2); //which gear are we in? 1,2,3
     txBatt = map(crsf.getChannel(1),CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,100);
     //if (abs(txBatt-txBatt_previous)<4) txBatt=txBatt_previous; //if battery percentage has moved less than 5%, we stay on previous value
     txBatt_previous=txBatt;
@@ -167,6 +167,7 @@ void loop() {
   //handle deadzone:
   if (abs(rxThrottle - CRSF_CHANNEL_VALUE_MID) < THROTTLE_DEADZONE) rxThrottle = CRSF_CHANNEL_VALUE_MID;
   if (abs(rxRudder - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
+  if (abs(rxGear - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
   
 
   //HANDLE RSSI:
@@ -215,16 +216,10 @@ void loop() {
       steering=0;
       break;
   }
-  //previousState = readSteeringFeedback();
-  //int steeringDelta = steering - previousState;
-  //if (steeringDelta == 0) noTurn();  //need to go nowhere
-  //else if (steeringDelta < 0) turnLeft();
-  //else if (steeringDelta > 0) turnRight();
-  
   //TODO: Determine steering constant for each gear!
   //IT SHOULD PROBABLY be inversely proportional to the speed....
                                   // 0, 1,  2,  3
-  float steeringAuthorityPerGear[4]={0,1.9,1.76,1.0};
+  float steeringAuthorityPerGear[4]={0,1.9,1.76,1.5};
 
   float steeringAuthority=steeringAuthorityPerGear[gear];
 
@@ -240,13 +235,13 @@ void loop() {
   }
   else if(throttleFullness<0){
   
-    if(steering<0) LEFT_throttlePWM -= (int)((steeringAuthority-throttleFullness)*(float)steering);
-    else if (steering>0) RIGHT_throttlePWM += (int)((steeringAuthority-throttleFullness)*(float)steering);
+    if(steering<0) RIGHT_throttlePWM -= (int)((steeringAuthority-throttleFullness)*(float)steering);
+    else if (steering>0) LEFT_throttlePWM += (int)((steeringAuthority-throttleFullness)*(float)steering);
   
   }
   else{
   
-    LEFT_throttlePWM = LEFT_throttlePWM_MID + (int)((float)steering+0.5*(float)steering*(gear-1)); //TODO: Is this just lidicrous??
+    LEFT_throttlePWM = LEFT_throttlePWM_MID + (int)((float)steering+0.5*(float)steering*(gear-1)); //TODO: Is this just ludicrous??
     RIGHT_throttlePWM = RIGHT_throttlePWM_MID - (int)((float)steering+0.5*(float)steering*(gear-1));
   
   }
@@ -258,20 +253,21 @@ void loop() {
 
 
 
-  Serial.print(",rxGear:"); Serial.print(rxGear);
-  Serial.print(",rxThrottle:"); Serial.print(rxThrottle);
-  
+  //Serial.print("Gear:"); Serial.print(gear);
+  //Serial.print(",rxGear:"); Serial.print(rxGear);
+  //Serial.print(",rxThrottle:"); Serial.print(rxThrottle);
   //Serial.print(",rxRudder:"); Serial.print(rxRudder);
-  //Serial.print("LEFT_Throttle(PWM):"); Serial.print(((float)LEFT_throttlePWM));
-  //Serial.print(",RIGHT_Throttle(PWM):"); Serial.print(((float)RIGHT_throttlePWM));
- 
-  //Serial.print("Steering:"); Serial.print((steering));
-  //Serial.print(",Fullness:"); Serial.print((throttleFullness*50.0)+50);
-
   
-  //Serial.print(",RSSI:"); Serial.print(((float)RSSI_PERCENT/100));
+ 
+  //Serial.print("\tSteering:"); Serial.print((steering));
+  //Serial.print("\tThrottle:"); Serial.print((throttleFullness));
 
-  //Serial.print(",TXBATT%:"); Serial.print(((float)txBatt)/100);
+  //Serial.print("\tL_dPWM:"); Serial.print(((float)LEFT_throttlePWM-47));
+  //Serial.print("\tR_dPWM:"); Serial.print(((float)RIGHT_throttlePWM-47));
+  
+  //Serial.print(",RSSI:"); Serial.print(((float)RSSI_PERCENT));
+
+  //Serial.print(",TXBATT%:"); Serial.print(((float)txBatt));
   
   //Serial.print(",Vbatt:"); Serial.print(vBatt);
   //Serial.print(",BATT%:"); Serial.print(readBatt());
@@ -280,30 +276,10 @@ void loop() {
   //Serial.print(",MIN:"); Serial.print(0);
   //Serial.print(",MAX:"); Serial.print(100);  
 
-  Serial.println();
-  delay(1);
+  //Serial.println();
+  //delay(1);
 }
 
-/*
-int readSteeringFeedback() {  //negative is turning left!
-  int aState = digitalRead(steeringFeedbackPinA);
-  int bState = digitalRead(steeringFeedbackPinB);
-  int cState = digitalRead(steeringFeedbackPinC);
-//  Serial.print(aState);
-//  Serial.print(" "); 
-//  Serial.print(bState);
-//  Serial.print(" "); 
-//  Serial.println(cState);
-
-  if (aState & bState & cState) return previousState;  //non-discrete in-between-state with all pins high - Keep moving the steering.
-  //Now we know the feedback is in a discrete state:
-  if (bState) return 2 - cState + aState;  //Steering feedback is positive (1,2,3)
-  else if (cState & !aState) return 0;     // A=0, B=0; C=1
-  else return -3 + aState + cState;        //-3,-2,-1
-}
-*/
-
-//
 static void sendRxBattery(float voltage, float current, float capacity, float remaining) {
   crsf_sensor_battery_t crsfBatt = { 0 };
 
@@ -318,7 +294,7 @@ static void sendRxBattery(float voltage, float current, float capacity, float re
 //Voltage divider: Vbatt - 10K - 10K - A2 - 10K - GND.
 #define V_BATTMAX 8.4f
 #define V_BATTMIN 6.0f
-#define V_ADCMAX 3.3f
+#define V_ADCMAX 5.0f
 #define ADCMAX 1023.0f
 #define V_DIVIDER_MAX_OUT 2.8f //8.4/3
 #define DIVIDER_FACTOR 0.33f
@@ -338,14 +314,3 @@ uint8_t readBatt(){
   //return (uint8_t)50;
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
-
-//Not using this shitty approach:
-/*
-#define NUMBER_OF_FIXED_RC_VALUES 7
-const static int16_t HARDCODED_RC_CHANNEL_VALUES[NUMBER_OF_FIXED_RC_VALUES] = {174,446,718,992,1265,1539,1811};
-
-int8_t getCRSFindex(int16_t CRSF_value){ 
-  for(int i = 0; i<NUMBER_OF_FIXED_RC_VALUES; i++ ) if(CRSF_value==HARDCODED_RC_CHANNEL_VALUES[i]) return i;
-  return -1;
-}
-*/
