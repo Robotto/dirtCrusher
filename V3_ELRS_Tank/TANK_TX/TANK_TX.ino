@@ -16,13 +16,13 @@ int VbattPin=A2;
 
 
 //Dirtcrusher remote controller pins
-const int xPin = 8; //ORANGE 
+const int xPin = 8; //YELLOW 
 const int yPin = 5; //GREEN
 const int throttle_aPin = A3; //yellow
-const int throttle_bPin = 10; //WHITE
-const int steering_aPin = 7; //yellow
-const int steering_bPin = 4; //white
-const int fasterPaddlePin = 9; //pink 
+const int throttle_bPin = 10; //BLUE
+const int steering_aPin = 4; //yellow
+const int steering_bPin = 7; //green
+const int fasterPaddlePin = 9; //green 
 const int slowerPaddlePin = 6; //blue
 
 int currentPktRate = 0;
@@ -76,7 +76,7 @@ void setup()
   u8g2.setFont(u8g_font_unifont); //11 pixels high?
   u8g2.setFontMode(1); //transparent font
   u8g2.clearBuffer();					// clear the internal memory
-  u8g2.drawXBMP( car_x, car_y, car_width, car_height, car_bits);
+  u8g2.drawXBMP( car_x, car_y, car_width, car_height, tank_bits);
   u8g2.drawXBMP( controller_x, controller_y, controller_width, controller_height, controller_bits);
   u8g2.drawXBMP( antenna_x, antenna_y, antenna_width, antenna_height, antenna_bits);
   u8g2.sendBuffer();         // transfer internal memory to the display
@@ -118,7 +118,7 @@ void loop()
 
   int8_t speedFactor = checkPaddles(); //1, 2 or 3
   int8_t throttleInput = getThrottle(); //-3 to 3
-  int8_t steeringInput = getSteering()*-1; //-3 to 3
+  int8_t steeringInput = getSteering(); //-3 to 3
   int8_t batteryPercent = readBatt();
 
 if(millis()-oledTimer>OLED_FRAMETIME_MS){
@@ -169,14 +169,14 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
     rcChannels[RUDDER]    = constrain(rudderVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
     rcChannels[ELEVATOR]  = constrain(gearVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
-    //Serial.print("speedFactor:"); Serial.print(speedFactor);
-    //Serial.print("\tSteering:"); Serial.print(steeringInput);
+    Serial.print("speedFactor:"); Serial.print(speedFactor);
+    Serial.print("\tSteering:"); Serial.print(steeringInput);
     //Serial.print("\tRXbatt:"); Serial.print(receiverBatteryVoltage);
     //Serial.print("\t[THROTTLE]:"); Serial.print(rcChannels[THROTTLE]);
     //Serial.print("\t[RUDDER]:"); Serial.print(rcChannels[RUDDER]);
     //Serial.print("\t[ELEVATOR]:"); Serial.print(rcChannels[ELEVATOR]);
 
-    //Serial.print("\tthrottleInput:"); Serial.print(throttleInput);
+    Serial.print("\tthrottleInput:"); Serial.print(throttleInput);
     //Serial.print("\tthrottleDiff:"); Serial.print(throttleDiff);
     //Serial.print("\tthrottleVal:"); Serial.print(throttleVal);
     //Serial.print("\tTHROTTLE:"); Serial.print(rcChannels[THROTTLE]);
@@ -186,7 +186,7 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
     //Serial.print("\tTELEMETRY_RSSI%:"); Serial.print(RSSI_PERCENT);
     //Serial.print("\tMIN:"); Serial.print(-3);
     //Serial.print("\tMAX:"); Serial.print(9);
-    //Serial.println();
+    Serial.println();
 
     if (currentMicros > crsfTime) {
 
