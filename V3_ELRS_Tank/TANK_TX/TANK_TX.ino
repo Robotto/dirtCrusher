@@ -120,6 +120,7 @@ void loop()
   int8_t throttleInput = getThrottle(); //-3 to 3
   int8_t steeringInput = getSteering(); //-3 to 3
   int8_t batteryPercent = readBatt();
+  batteryPercent = constrain(batteryPercent,0,100);
 
 if(millis()-oledTimer>OLED_FRAMETIME_MS){
   redraw(receiverBatteryPercentage, receiverBatteryVoltage, batteryPercent, RSSI_PERCENT, speedFactor);
@@ -169,14 +170,14 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
     rcChannels[RUDDER]    = constrain(rudderVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
     rcChannels[ELEVATOR]  = constrain(gearVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
 
-    Serial.print("speedFactor:"); Serial.print(speedFactor);
-    Serial.print("\tSteering:"); Serial.print(steeringInput);
+    //Serial.print("speedFactor:"); Serial.print(speedFactor);
+    //Serial.print("\tSteering:"); Serial.print(steeringInput);
     //Serial.print("\tRXbatt:"); Serial.print(receiverBatteryVoltage);
     //Serial.print("\t[THROTTLE]:"); Serial.print(rcChannels[THROTTLE]);
     //Serial.print("\t[RUDDER]:"); Serial.print(rcChannels[RUDDER]);
     //Serial.print("\t[ELEVATOR]:"); Serial.print(rcChannels[ELEVATOR]);
 
-    Serial.print("\tthrottleInput:"); Serial.print(throttleInput);
+    //Serial.print("\tthrottleInput:"); Serial.print(throttleInput);
     //Serial.print("\tthrottleDiff:"); Serial.print(throttleDiff);
     //Serial.print("\tthrottleVal:"); Serial.print(throttleVal);
     //Serial.print("\tTHROTTLE:"); Serial.print(rcChannels[THROTTLE]);
@@ -186,7 +187,7 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
     //Serial.print("\tTELEMETRY_RSSI%:"); Serial.print(RSSI_PERCENT);
     //Serial.print("\tMIN:"); Serial.print(-3);
     //Serial.print("\tMAX:"); Serial.print(9);
-    Serial.println();
+    //Serial.println();
 
     if (currentMicros > crsfTime) {
 

@@ -251,7 +251,7 @@ void loop() {
 //  analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM_MID);  //TODO: Determine if deadzone is large enough
 
 
-  
+  /*
   Serial.print("Gear:"); Serial.print(gear);
   Serial.print("\trxGear:"); Serial.print(rxGear);
   Serial.print("\trxThrottle:"); Serial.print(rxThrottle);
@@ -277,6 +277,7 @@ void loop() {
 
   Serial.println();
   delay(1);
+  */
 
 }
 
