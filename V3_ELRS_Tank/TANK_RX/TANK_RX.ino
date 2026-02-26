@@ -2,36 +2,14 @@
 #include "src/AlfredoCRSF/AlfredoCRSF.h"
 #define CRSF_DIGITAL_CHANNEL_MIN 172
 #define CRSF_DIGITAL_CHANNEL_MAX 1811
+
 //Pins:
-/*
-const int steeringFeedbackPinA = 4;
-const int steeringFeedbackPinB = 5;
-const int steeringFeedbackPinC = 6;
-const int steeringDriverPin1 = 7;
-const int steeringDriverPin2 = 8;
-*/
 const int LEFT_PWMmotorPin = 9;
 const int RIGHT_PWMmotorPin = 10;
-
 const int VbattPin = A2;
+
 //Constants:
 const int failsafeTimeout = 250;  //ms
-
-
-AlfredoCRSF crsf;
-
-//Variables:
-//uint8_t rx=0;
-int rssiPWM = 0;
-float RSSI_WORST = 108.0;  //dBm (negative)
-int rssi = RSSI_WORST;
-float RSSI_BEST = 50.0;  //dBm (negative)
-float RSSI_PERCENT = 0;
-unsigned long lastTelemetryTXtime = 0;
-
-unsigned long nextFailsafeTimeout = 0;
-int previousState = 0;  //holds steering feedback position from last read.
-
 const int LEFT_throttlePWM_MAX = 62;
 const int LEFT_throttlePWM_MIN = 32;
 const int LEFT_throttlePWM_SPAN = (LEFT_throttlePWM_MAX - LEFT_throttlePWM_MIN);
@@ -45,6 +23,17 @@ const int RIGHT_throttlePWM_MID = RIGHT_throttlePWM_MIN + RIGHT_throttlePWM_SPAN
 const int THROTTLE_DEADZONE = 10;
 const int RUDDER_DEADZONE = 250;
 
+//Variables:
+//float RSSI_WORST = 108.0;  //dBm (negative)
+//int rssi = RSSI_WORST;
+//float RSSI_BEST = 50.0;  //dBm (negative)
+//float RSSI_PERCENT = 0;
+
+unsigned long lastTelemetryTXtime = 0;
+
+unsigned long nextFailsafeTimeout = 0;
+int previousState = 0;  //holds steering feedback position from last read.
+
 int LEFT_throttlePWM = LEFT_throttlePWM_MID;
 int RIGHT_throttlePWM = RIGHT_throttlePWM_MID;
 
@@ -52,22 +41,9 @@ int steering = 0;
 int gear = 1; //1,2,3
 
 
+
 //Objects:
-//DRV8871 steeringDriver(steeringDriverPin1, steeringDriverPin2);
-/*
-void noTurn() {
-  steeringDriver.brake();
-}
-
-void turnLeft() {
-  steeringDriver.reverse();
-}
-
-void turnRight() {
-  steeringDriver.forward();
-}
-*/
-
+AlfredoCRSF crsf;
 
 void setup() {
   Serial.begin(250000);
@@ -90,18 +66,14 @@ void setup() {
   TCCR1B = TCCR1B & 0b11111000 | 0x04;  // <- Works.
   //TCCR1B = TCCR1B & 0b11111000 | 0x05;
   
-  //pinMode(steeringFeedbackPinA, INPUT_PULLUP);
-  //pinMode(steeringFeedbackPinB, INPUT_PULLUP);
-  //pinMode(steeringFeedbackPinC, INPUT_PULLUP);
   pinMode(LEFT_PWMmotorPin, OUTPUT);
   pinMode(RIGHT_PWMmotorPin, OUTPUT);
-  //pinMode(PWMrssiPin, OUTPUT);
 
   Serial.println("Good to go!");
 }
 
-int txBatt;
-int txBatt_previous;
+//int txBatt;
+//int txBatt_previous;
 float vBatt;
 
 void loop() {
@@ -112,34 +84,24 @@ void loop() {
   // Must call crsf.update() in loop() to process data
   crsf.update();
 
-
-
   if (crsf.isLinkUp()) {  //TODO: Check if failsafe is a thing?!
 //https://github.com/crsf-wg/crsf/wiki/CRSF_FRAMETYPE_LINK_STATISTICS
+  /*
     const crsfLinkStatistics_t* stat_ptr = crsf.getLinkStatistics();
     uint8_t RSSI_1 = stat_ptr->uplink_RSSI_1;
     uint8_t RSSI_2 = stat_ptr->uplink_RSSI_2;
     uint8_t RSSI = min(RSSI_1, RSSI_2);
     RSSI_PERCENT = map(RSSI, RSSI_WORST, RSSI_BEST, 0, 100);
     RSSI_PERCENT = constrain(RSSI_PERCENT, 0, 100);
-
+  */
     nextFailsafeTimeout = millis() + failsafeTimeout;
 
-
-
-
-    //uint8_t LQ = stat_ptr->uplink_Link_quality;
     rxThrottle = crsf.getChannel(3);  //INDEXED BY 1 YOU PIECE OF SHIIIIT!
     rxRudder = crsf.getChannel(4);
     rxGear = crsf.getChannel(2); //which gear are we in? 1,2,3
-    txBatt = map(crsf.getChannel(1),CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,100);
+    //txBatt = map(crsf.getChannel(1),CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,100);
     //if (abs(txBatt-txBatt_previous)<4) txBatt=txBatt_previous; //if battery percentage has moved less than 5%, we stay on previous value
-    txBatt_previous=txBatt;
-
-
-
-
-
+    //txBatt_previous=txBatt;
 
 
   
@@ -157,8 +119,8 @@ void loop() {
     RIGHT_throttlePWM = RIGHT_throttlePWM_MID;
     rxGear = CRSF_DIGITAL_CHANNEL_MIN;
     steering = 0;
-    RSSI_PERCENT = 0.0;
-    txBatt=0;
+    //RSSI_PERCENT = 0.0;
+    //txBatt=0;
     static unsigned long notConnectedPrintTime = 0;
     if(millis() > notConnectedPrintTime+3000) { Serial.println("CRSF link is down@" + String(millis())); notConnectedPrintTime=millis();}
   }
@@ -169,11 +131,6 @@ void loop() {
   if (abs(rxRudder - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxRudder = CRSF_CHANNEL_VALUE_MID;
   if (abs(rxGear - CRSF_CHANNEL_VALUE_MID) < RUDDER_DEADZONE) rxGear = CRSF_CHANNEL_VALUE_MID;
   
-
-  //HANDLE RSSI:
-  //rssiPWM = map(RSSI_PERCENT, 0, 100, 0, 255);
-  //analogWrite(PWMrssiPin, rssiPWM);
-
   //HANDLE Gear:
   gear=1;
   if ( rxGear == CRSF_CHANNEL_VALUE_MID) gear = 2;
@@ -216,8 +173,8 @@ void loop() {
       steering=0;
       break;
   }
-  //TODO: Determine steering constant for each gear!
-  //IT SHOULD PROBABLY be inversely proportional to the speed....
+  
+  //Steering authority should be inversely proportional to the speed:
                                   // 0, 1,  2,  3
   float steeringAuthorityPerGear[4]={0,1.9,1.76,1.5};
 
@@ -245,10 +202,10 @@ void loop() {
     }
   }
   
-  analogWrite(LEFT_PWMmotorPin, LEFT_throttlePWM);  //TODO: Determine if deadzone is large enough
-  analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM);  //TODO: Determine if deadzone is large enough
-//  analogWrite(LEFT_PWMmotorPin, LEFT_throttlePWM_MID);  //TODO: Determine if deadzone is large enough
-//  analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM_MID);  //TODO: Determine if deadzone is large enough
+  analogWrite(LEFT_PWMmotorPin, LEFT_throttlePWM);  
+  analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM);  
+//  analogWrite(LEFT_PWMmotorPin, LEFT_throttlePWM_MID); 
+//  analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM_MID);  
 
 
   /*
