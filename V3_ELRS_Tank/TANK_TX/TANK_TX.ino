@@ -12,7 +12,7 @@ int Rudder_value = 0;
 
 int loopCount = 0; // for ELRS seeting
 
-int VbattPin=A2;
+int VbattPin=A0;
 
 
 //Dirtcrusher remote controller pins
@@ -102,8 +102,7 @@ void loop()
     crsfClass.update();
 
     RSSI_PERCENT=0;
-    if(crsfClass.linkUP())
-{
+    if(crsfClass.linkUP()){
       const crsf_sensor_battery_t* batt = crsfClass.getBatt();
       receiverBatteryVoltage = (float)(batt->voltage)/10.0;
       receiverBatteryPercentage = batt->remaining;
@@ -111,10 +110,11 @@ void loop()
       uint8_t RSSI = stat_ptr->downlink_RSSI;
       RSSI_PERCENT = map(RSSI,RSSI_WORST,RSSI_BEST,0,100);
       RSSI_PERCENT = constrain(RSSI_PERCENT, 0, 100);
-}   
-
-
-
+  }   
+  else {
+    static unsigned long notConnectedPrintTime = 0;
+    if(millis() > notConnectedPrintTime+3000) { Serial.println("CRSF link is down@" + String(millis())); notConnectedPrintTime=millis();}
+  }
 
   int8_t speedFactor = checkPaddles(); //1, 2 or 3
   int8_t throttleInput = getThrottle(); //-3 to 3
@@ -191,7 +191,13 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
 
     if (currentMicros > crsfTime) {
 
-            if (loopCount <= 500) { // repeat 500 packets to build connection to TX module
+            if (loopCount > 515)
+            {
+                crsfClass.crsfPrepareDataPacket(crsfPacket, rcChannels);
+                crsfClass.CrsfWritePacket(crsfPacket, CRSF_PACKET_SIZE);
+            }
+
+            else if (loopCount <= 500) { // repeat 500 packets to build connection to TX module
                 // Build commond packet
                 crsfClass.crsfPrepareDataPacket(crsfPacket, rcChannels);
                 crsfClass.CrsfWritePacket(crsfPacket, CRSF_PACKET_SIZE);
@@ -199,8 +205,7 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
             }
 
                 //TODO: Is this at all neccesary??
-
-            if (loopCount > 500 && loopCount <= 505) { // repeat 5 packets to avoid bad packet, change rate setting
+            else if (loopCount > 500 && loopCount <= 505) { // repeat 5 packets to avoid bad packet, change rate setting
                 // Build commond packet
                 if (currentSetting == 1 || currentSetting == 2) {
                     crsfClass.crsfPrepareCmdPacket(crsfCmdPacket  , ELRS_PKT_RATE_COMMAND, currentPktRate);
@@ -225,10 +230,7 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
                     crsfClass.CrsfWritePacket(crsfCmdPacket, CRSF_CMD_PACKET_SIZE);
                 }
                 loopCount++;
-            } else {
-                crsfClass.crsfPrepareDataPacket(crsfPacket, rcChannels);
-                crsfClass.CrsfWritePacket(crsfPacket, CRSF_PACKET_SIZE);
-            }
+            } 
 
         crsfTime = currentMicros + CRSF_TIME_BETWEEN_FRAMES_US;
     }
