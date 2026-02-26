@@ -92,16 +92,16 @@ int fakeSteeringInput = 3;
 */
 unsigned long oledTimer=0;
 #define OLED_FRAMETIME_MS 500
-
+float receiverBatteryVoltage=0;
+uint8_t receiverBatteryPercentage=0;
+unsigned long telemetryTimeout = 0;
 void loop()
 {
-    float receiverBatteryVoltage=0;
-    uint8_t receiverBatteryPercentage=0;
+    
 
     uint32_t currentMicros = micros();
     crsfClass.update();
 
-    RSSI_PERCENT=0;
     if(crsfClass.linkUP()){
       const crsf_sensor_battery_t* batt = crsfClass.getBatt();
       receiverBatteryVoltage = (float)(batt->voltage)/10.0;
@@ -110,10 +110,17 @@ void loop()
       uint8_t RSSI = stat_ptr->downlink_RSSI;
       RSSI_PERCENT = map(RSSI,RSSI_WORST,RSSI_BEST,0,100);
       RSSI_PERCENT = constrain(RSSI_PERCENT, 0, 100);
+      telemetryTimeout=millis();
   }   
-  else {
-    static unsigned long notConnectedPrintTime = 0;
-    if(millis() > notConnectedPrintTime+3000) { Serial.println("CRSF link is down@" + String(millis())); notConnectedPrintTime=millis();}
+  else {  
+
+    if(millis() > telemetryTimeout+3000) {
+       Serial.println("CRSF link is down@" + String(millis())); 
+       receiverBatteryVoltage=0;
+       receiverBatteryPercentage=0;
+       RSSI_PERCENT=0;
+       telemetryTimeout=millis();
+       }
   }
 
   int8_t speedFactor = checkPaddles(); //1, 2 or 3
@@ -169,13 +176,13 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
     rcChannels[THROTTLE]  = constrain(throttleVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
     rcChannels[RUDDER]    = constrain(rudderVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
     rcChannels[ELEVATOR]  = constrain(gearVal,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX);
-
-    //Serial.print("speedFactor:"); Serial.print(speedFactor);
-    //Serial.print("\tSteering:"); Serial.print(steeringInput);
-    //Serial.print("\tRXbatt:"); Serial.print(receiverBatteryVoltage);
-    //Serial.print("\t[THROTTLE]:"); Serial.print(rcChannels[THROTTLE]);
-    //Serial.print("\t[RUDDER]:"); Serial.print(rcChannels[RUDDER]);
-    //Serial.print("\t[ELEVATOR]:"); Serial.print(rcChannels[ELEVATOR]);
+/*
+    Serial.print("speedFactor:"); Serial.print(speedFactor);
+    Serial.print("\tSteering:"); Serial.print(steeringInput);
+    Serial.print("\tRXbatt:"); Serial.print(receiverBatteryVoltage);
+    Serial.print("\t[THROTTLE]:"); Serial.print(rcChannels[THROTTLE]);
+    Serial.print("\t[RUDDER]:"); Serial.print(rcChannels[RUDDER]);
+    Serial.print("\t[ELEVATOR]:"); Serial.print(rcChannels[ELEVATOR]);
 
     //Serial.print("\tthrottleInput:"); Serial.print(throttleInput);
     //Serial.print("\tthrottleDiff:"); Serial.print(throttleDiff);
@@ -187,8 +194,8 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
     //Serial.print("\tTELEMETRY_RSSI%:"); Serial.print(RSSI_PERCENT);
     //Serial.print("\tMIN:"); Serial.print(-3);
     //Serial.print("\tMAX:"); Serial.print(9);
-    //Serial.println();
-
+    Serial.println();
+*/
     if (currentMicros > crsfTime) {
 
             if (loopCount > 515)
@@ -234,6 +241,7 @@ if(millis()-oledTimer>OLED_FRAMETIME_MS){
 
         crsfTime = currentMicros + CRSF_TIME_BETWEEN_FRAMES_US;
     }
+    delay(1);
 }
 
 

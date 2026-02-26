@@ -40,9 +40,9 @@
 // internal crsf variables
 #define CRSF_TIME_NEEDED_PER_FRAME_US   1100 // 700 ms + 400 ms for potential ad-hoc request
 #define SERIAL_BAUDRATE                 115200 //low baud for Arduino Nano , the TX module will auto detect baud. 115200/400000
-#define CRSF_TIME_BETWEEN_FRAMES_US     4000 // 4 ms 250Hz
+//#define CRSF_TIME_BETWEEN_FRAMES_US     4000 // 4 ms 250Hz
 //#define SERIAL_BAUDRATE                 400000
-//#define CRSF_TIME_BETWEEN_FRAMES_US     1666 // 1.6 ms 500Hz
+#define CRSF_TIME_BETWEEN_FRAMES_US     1666 // 1.6 ms 500Hz
 #define CRSF_PAYLOAD_OFFSET             offsetof(crsfFrameDef_t, type)
 #define CRSF_MSP_RX_BUF_SIZE            128
 #define CRSF_MSP_TX_BUF_SIZE            128

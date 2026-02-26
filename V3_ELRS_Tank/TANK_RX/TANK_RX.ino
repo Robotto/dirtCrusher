@@ -220,7 +220,7 @@ void loop() {
 
   Serial.print("\tL_dPWM:"); Serial.print(((float)LEFT_throttlePWM-LEFT_throttlePWM_MID));
   Serial.print("\tR_dPWM:"); Serial.print(((float)RIGHT_throttlePWM-RIGHT_throttlePWM_MID));
-  
+
   //Serial.print("\tRSSI:"); Serial.print(((float)RSSI_PERCENT));
 
   //Serial.print("\tTXBATT%:"); Serial.print(((float)txBatt));
@@ -233,9 +233,9 @@ void loop() {
   //Serial.print("\tMAX:"); Serial.print(100);  
 
   Serial.println();
-  delay(1);
-  */
 
+  delay(1);
+*/
 }
 
 static void sendRxBattery(float voltage, float current, float capacity, float remaining) {
