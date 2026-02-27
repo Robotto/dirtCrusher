@@ -176,14 +176,16 @@ void loop() {
   
   //Steering authority should be inversely proportional to the speed:
                                   // 0, 1,  2,  3
-  float steeringAuthorityPerGear[4]={0,1.9,1.76,1.5};
+  const float steeringAuthorityPerGear[4]={0,1.9,1.85,1.75};
+
+
+  if(steering!=0) {
 
   float steeringAuthority=steeringAuthorityPerGear[gear];
 
   //Calculate throttle percentage to determine how much to steer:
-  float throttleFullness = (map(rxThrottle,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,0,2000)-1000)/1000.0;
+  float throttleFullness = map(rxThrottle,CRSF_CHANNEL_VALUE_MIN,CRSF_CHANNEL_VALUE_MAX,-1000,1000)/1000.0;
 
-  if(steering!=0) {
     if(throttleFullness>0){
 
       if(steering<0) LEFT_throttlePWM += (int)((steeringAuthority-throttleFullness)*(float)steering);
