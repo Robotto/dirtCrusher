@@ -104,7 +104,8 @@ void loop()
 
     if(crsfClass.linkUP()){
       const crsf_sensor_battery_t* batt = crsfClass.getBatt();
-      receiverBatteryVoltage = (float)(batt->voltage)/10.0;
+      receiverBatteryVoltage=0.0;
+      if(batt->voltage>0 && batt->voltage<255) receiverBatteryVoltage = (float)(batt->voltage)/10.0;
       receiverBatteryPercentage = batt->remaining;
       const crsfLinkStatistics_t* stat_ptr = crsfClass.getLinkStatistics();
       uint8_t RSSI = stat_ptr->downlink_RSSI;

@@ -45,13 +45,18 @@ int gear = 1; //1,2,3
 //Objects:
 AlfredoCRSF crsf;
 
+//int txBatt;
+//int txBatt_previous;
+float vBatt;
+uint8_t batteryPercentage;
+
 void setup() {
-  Serial.begin(250000);
+  Serial.begin(115200);
   Serial.println("COM Serial initialized");
 
   Serial1.begin(250000);
   if (!Serial1)
-    while (1) Serial.println("Invalid crsfSerial configuration");
+    while (1); Serial.println("Invalid crsfSerial configuration");
 
   crsf.begin(Serial1);
 
@@ -70,11 +75,11 @@ void setup() {
   pinMode(RIGHT_PWMmotorPin, OUTPUT);
 
   Serial.println("Good to go!");
+
+  batteryPercentage=readBatt();
 }
 
-//int txBatt;
-//int txBatt_previous;
-float vBatt;
+
 
 void loop() {
   int16_t rxThrottle = CRSF_CHANNEL_VALUE_MID;
@@ -107,7 +112,7 @@ void loop() {
   
     if (millis() - lastTelemetryTXtime > 250) {
       //uint16_t batteryVoltage = (uint16_t)(((1.0 + sin((float)millis() / 1000.0)) * 0.5) * 10.0);
-      uint8_t batteryPercentage = readBatt();
+      batteryPercentage = readBatt();
       
       sendRxBattery(vBatt, 0, 0, (float)batteryPercentage);
       lastTelemetryTXtime = millis();
@@ -140,6 +145,7 @@ void loop() {
   //HANDLE THROTTLE:
   
   //Calculate throttle before adding/subtracting steering values:
+  
   LEFT_throttlePWM = map(rxThrottle, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, LEFT_throttlePWM_MIN, LEFT_throttlePWM_MAX);
   RIGHT_throttlePWM = map(rxThrottle, CRSF_CHANNEL_VALUE_MIN, CRSF_CHANNEL_VALUE_MAX, RIGHT_throttlePWM_MIN, RIGHT_throttlePWM_MAX);
   
@@ -203,32 +209,37 @@ void loop() {
       RIGHT_throttlePWM = RIGHT_throttlePWM_MID - (int)((float)steering/(float)gear+(float)steering*(float)gear*steeringAuthority+0.3/(float)steering);
     }
   }
-  
+
+  if(batteryPercentage>5){ //Low battery lockout
   analogWrite(LEFT_PWMmotorPin, LEFT_throttlePWM);  
   analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM);  
-//  analogWrite(LEFT_PWMmotorPin, LEFT_throttlePWM_MID); 
-//  analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM_MID);  
+  }
+  else
+  {
+  analogWrite(LEFT_PWMmotorPin, LEFT_throttlePWM_MID); 
+  analogWrite(RIGHT_PWMmotorPin, RIGHT_throttlePWM_MID);  
+  }
 
 
-  /*
-  Serial.print("Gear:"); Serial.print(gear);
-  Serial.print("\trxGear:"); Serial.print(rxGear);
-  Serial.print("\trxThrottle:"); Serial.print(rxThrottle);
-  Serial.print("\trxRudder:"); Serial.print(rxRudder);
+  
+  //Serial.print("Gear:"); Serial.print(gear);
+  //Serial.print("\trxGear:"); Serial.print(rxGear);
+  //Serial.print("\trxThrottle:"); Serial.print(rxThrottle);
+  //Serial.print("\trxRudder:"); Serial.print(rxRudder);
   
  
-  Serial.print("\tSteering:"); Serial.print((steering));
+  //Serial.print("\tSteering:"); Serial.print((steering));
   //Serial.print("\tThrottle:"); Serial.print((throttleFullness));
 
-  Serial.print("\tL_dPWM:"); Serial.print(((float)LEFT_throttlePWM-LEFT_throttlePWM_MID));
-  Serial.print("\tR_dPWM:"); Serial.print(((float)RIGHT_throttlePWM-RIGHT_throttlePWM_MID));
-
+  //Serial.print("\tL_dPWM:"); Serial.print(((float)LEFT_throttlePWM-LEFT_throttlePWM_MID));
+  //Serial.print("\tR_dPWM:"); Serial.print(((float)RIGHT_throttlePWM-RIGHT_throttlePWM_MID));
+  
   //Serial.print("\tRSSI:"); Serial.print(((float)RSSI_PERCENT));
 
   //Serial.print("\tTXBATT%:"); Serial.print(((float)txBatt));
   
-  //Serial.print("\tVbatt:"); Serial.print(vBatt);
-  //Serial.print("\tBATT%:"); Serial.print(readBatt());
+  Serial.print("\tVbatt:"); Serial.print(vBatt);
+  Serial.print("\tBATT%:"); Serial.print(readBatt());
 
   //DUMMY VALUES TO STOP SERIAL PLOTTER FROM AUTOSCALING...
   //Serial.print("\tMIN:"); Serial.print(0);
@@ -237,7 +248,7 @@ void loop() {
   Serial.println();
 
   delay(1);
-*/
+
 }
 
 static void sendRxBattery(float voltage, float current, float capacity, float remaining) {
@@ -253,12 +264,12 @@ static void sendRxBattery(float voltage, float current, float capacity, float re
 
 //Voltage divider: Vbatt - 10K - 10K - A2 - 10K - GND.
 #define V_BATTMAX 8.4f
-#define V_BATTMIN 6.0f
+#define V_BATTMIN 7.0f
 #define V_ADCMAX 5.0f
 #define ADCMAX 1023.0f
 #define V_DIVIDER_MAX_OUT 2.8f //8.4/3
-#define DIVIDER_FACTOR 0.33f
-#define V_CALIBATED_OFFSET -0.07f
+#define DIVIDER_FACTOR 0.333f
+#define V_CALIBATED_OFFSET 8.09-8.34f
 #define N_MEASUREMENTS 16
 
 
@@ -272,5 +283,6 @@ uint8_t readBatt(){
           //Vbatt minimum = 3.0, VbattMaximum = 4.2
   //Serial.println(vBatt);
   //return (uint8_t)50;
+  if(vBatt<V_BATTMIN) return (uint8_t)0; //uh-oh ... don't want to be here...
   return uint8_t(((vBatt - V_BATTMIN) * 100.0 / (V_BATTMAX - V_BATTMIN))); //calculate battery percentage
 }
